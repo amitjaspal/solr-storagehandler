@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry including="**/*.java" kind="src" output="target/test-classes" path="src/test/java"/>
+	<classpathentry including="**/*.java" kind="src" path="src/main/java"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="var" path="M2_REPO/junit/junit/3.8.1/junit-3.8.1.jar"/>
+	<classpathentry kind="lib" path="/usr/lib/hive/lib/junit-4.10.jar"/>
+	<classpathentry kind="lib" path="/usr/lib/hive/lib/hive-exec.jar" sourcepath="/home/amitjaspal/Downloads/apache-hive-0.13.1-src"/>
+	<classpathentry kind="lib" path="/home/amitjaspal/Desktop/useful_jars/hadoop-core-1.0.3.jar" sourcepath="/home/amitjaspal/Desktop/useful_jars/hadoop-2.2.0-src"/>
+	<classpathentry kind="lib" path="/usr/lib/hive/lib/hive-metastore.jar" sourcepath="/home/amitjaspal/projects/apache-hive-0.13.1-src"/>
+	<classpathentry kind="lib" path="/usr/lib/hive/lib/hive-serde.jar"/>
+	<classpathentry kind="lib" path="/home/amitjaspal/Desktop/useful_jars/solr-solrj-4.1.0.jar" sourcepath="/home/amitjaspal/Desktop/useful_jars/solr-solrj-4.1.0-sources.jar"/>
+	<classpathentry kind="output" path="target/classes"/>
+</classpath>
