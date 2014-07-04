@@ -12,11 +12,10 @@ import org.apache.solr.common.SolrDocument;
 public class SolrRecordReader implements RecordReader<LongWritable, MapWritable>{
     
     private SolrDAO solrDAO;
-    private HiveSolrSplit hiveSolrSplit;
     private Integer currentPosition;
     
     public SolrRecordReader(InputSplit solrSplit, SolrDAO solrDAO){
-        this.hiveSolrSplit = (HiveSolrSplit)solrSplit;
+       // this.hiveSolrSplit = (HiveSolrSplit)solrSplit;
         this.currentPosition = 0;
         this.solrDAO = solrDAO;
     }

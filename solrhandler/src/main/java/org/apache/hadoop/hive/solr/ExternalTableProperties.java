@@ -5,20 +5,21 @@ import java.util.Properties;
 
 public class ExternalTableProperties {
 
-	static final String SOURCE_URL = "solr.server.url";
+	static final String ZOOKEEPER_SERVICE_URL = "solr.zookeeper.service.url";
+	static final String COLLECTION_NAME = "solr.collection.name";
 	static final String SOURCE_QUERY = "solr.query";
 	
 	public static void configureExternalTableProperties(Properties tableProperties, Map<String,String> jobProperties){
 		
-		// Set source-url in the jobProperty
-		String sourceURL = tableProperties.getProperty(SOURCE_URL);
-		System.out.println("Reading table property URL " + sourceURL);
-		jobProperties.put(SOURCE_URL, sourceURL);
+		// Set zookeeper.service.url in the jobProperty
+		String zookeeperService = tableProperties.getProperty(ZOOKEEPER_SERVICE_URL);
+		System.out.println("Reading table property zookeeper url " + zookeeperService);
+		jobProperties.put(ZOOKEEPER_SERVICE_URL, zookeeperService);
 		
-		// Set source-query in the jobProperty
-		String sourceQuery = tableProperties.getProperty(SOURCE_QUERY);
-		System.out.println("Reading table property query " + sourceQuery);
-		jobProperties.put(SOURCE_QUERY, sourceQuery);
+		// Set collection.name in the jobProperty
+		String collectionName = tableProperties.getProperty(COLLECTION_NAME);
+		System.out.println("Reading table property collection name " + collectionName);
+		jobProperties.put(COLLECTION_NAME, collectionName);
 		
 	}
 	

@@ -34,8 +34,13 @@ public class SolrOutputFormat implements HiveOutputFormat <NullWritable, Row>{
             final Class<? extends Writable> valueClass, boolean isCompressed,
             Properties tableProperties, Progressable progress) throws IOException{
         
-        SolrDAO solrDAO = new SolrDAO(jc.get(ExternalTableProperties.SOURCE_URL),
-                                      jc.get(ExternalTableProperties.SOURCE_QUERY));
+        // Need to figure out how to improve the degree of parallelism.
+        // For now we will just have 1 shard inserting all the documents.
+        
+        String baseURL = "http://ubuntu:8983/solr";
+        String shardName = "collection2_shard1_replica1";
+        String collectionName = "collection2";
+        SolrDAO solrDAO = new SolrDAO(baseURL, shardName, collectionName);
         return new SolrRecordWriter(solrDAO);
     }
 

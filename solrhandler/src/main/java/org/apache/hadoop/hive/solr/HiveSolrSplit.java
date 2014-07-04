@@ -5,21 +5,31 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.InputSplit;
 
-
+/*
+ * HiveSolrSplit is just a wrapper class on top of SolrSplit. It seems 
+ * Hive considers data sources to be of FileFormat so we need to define
+ * the wrapper class HiveSolrSplit which extends from FileSplit.
+ * Under the hood all functionalities are delegated to SolrSplit 
+ * only.
+ */
 class HiveSolrSplit extends FileSplit {
     
-    private InputSplit solrSplit;
+    private SolrInputSplit solrSplit;
     private Path path;
     
+    // Its strange that Hive tries to call the default constructor for HiveSolrSplit
+    // because as part of getSplits we are already exposing the splits. It also expects
+    // the path to be "hdfs://localhost:8020/user/hive/warehouse/books" even though
+    // the table has been defined external.
+    // Hard coding this for now.
     public HiveSolrSplit(){
-        //super(null, 0, 0, (String[]) null);
-        this(new SolrSplit(), new Path("hdfs://localhost:8020/user/hive/warehouse/books"));
+       this(new SolrInputSplit(), new Path("hdfs://localhost:8020/user/hive/warehouse/books"));
     }
     
-    HiveSolrSplit(InputSplit solrSplit, Path path){
+    HiveSolrSplit(SolrInputSplit solrSplit, Path path){
         super(path, 0, 0, (String[]) null);
         this.solrSplit = solrSplit;
         this.path = path;
@@ -34,16 +44,12 @@ class HiveSolrSplit extends FileSplit {
     }
     
     public void write(DataOutput out) throws IOException{
+        Text.writeString(out, path.toString());
         solrSplit.write(out);
     }
     
     public void readFields(DataInput in) throws IOException {
-        if(solrSplit == null){
-            System.out.println("SolrSplit is null");
-        }
-        if(in == null){
-            System.out.println("InputStream is null");
-        }
+        path = new Path(Text.readString(in));
         solrSplit.readFields(in);
     }
 
@@ -57,4 +63,7 @@ class HiveSolrSplit extends FileSplit {
         return path;
     }
     
+    public SolrInputSplit getSolrSplit(){
+        return this.solrSplit;
+    }
 }

@@ -10,5 +10,6 @@
 	<classpathentry kind="lib" path="/usr/lib/hive/lib/hive-metastore.jar" sourcepath="/home/amitjaspal/projects/apache-hive-0.13.1-src"/>
 	<classpathentry kind="lib" path="/usr/lib/hive/lib/hive-serde.jar"/>
 	<classpathentry kind="lib" path="/home/amitjaspal/Desktop/useful_jars/solr-solrj-4.1.0.jar" sourcepath="/home/amitjaspal/Desktop/useful_jars/solr-solrj-4.1.0-sources.jar"/>
+	<classpathentry kind="lib" path="/home/amitjaspal/Desktop/useful_jars/org.apache.commons.logging-1.1.1.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

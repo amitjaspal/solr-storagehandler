@@ -12,32 +12,38 @@ import org.apache.solr.common.SolrInputDocument;
 
 public class SolrDAO{
 
+    private String nodeURL;
+    private String shardName;
+    private String collectionName;
     private HttpSolrServer solrServer;
     private SolrDocumentList resultSet;
     private Integer currentPosition;
-    private String query;
+    private SolrQuery query;
     
-    SolrDAO(String solrServerUrl, String query){
-        String SOLR_URL = "http://localhost:8983/solr/collection2";
-        solrServerUrl = SOLR_URL;
-        System.out.println("SOLR SERVER URL - " + solrServerUrl);
-        this.solrServer = new HttpSolrServer(solrServerUrl);
+    SolrDAO(String nodeURL, String shardName, String collectionName){
+        this.nodeURL = nodeURL;
+        this.shardName = shardName;
+        this.collectionName = collectionName;
+        this.solrServer = new HttpSolrServer(this.nodeURL + "/" + this.shardName);
         currentPosition = 0;
+        
+        query = new SolrQuery();
+        query.setQuery( "chetan" );
+        query.set("wt", "json");
+        query.set("indent", "true");
+        query.set("fl", "id, author, title, price");
+    }
+ 
+    public void setQuery(SolrQuery query){
         this.query = query;
     }
-    
 
     public void executeQuery(){
-        SolrQuery params = new SolrQuery();
-        params.setQuery(query);
-        params.setQuery( "chetan" );
-        params.set("wt", "json");
-        params.set("indent", "true");
-        params.set("fl", "id, title, author, price");
+
         QueryResponse response = null;
         System.out.println("Executing Query !!");
         try{
-            response = solrServer.query(params);
+            response = solrServer.query(query);
             
         }catch( SolrServerException e){
             // do some logging about the failure of the query.
@@ -71,5 +77,28 @@ public class SolrDAO{
     public long getLength(){
         return resultSet.size();
     }
-    
+
+    public String getNodeURL() {
+        return nodeURL;
+    }
+
+    public void setNodeURL(String nodeURL) {
+        this.nodeURL = nodeURL;
+    }
+
+    public String getShardName() {
+        return shardName;
+    }
+
+    public void setShardName(String shardName) {
+        this.shardName = shardName;
+    }
+
+    public String getCollectionName() {
+        return collectionName;
+    }
+
+    public void setCollectionName(String collectionName) {
+        this.collectionName = collectionName;
+    }
 }
