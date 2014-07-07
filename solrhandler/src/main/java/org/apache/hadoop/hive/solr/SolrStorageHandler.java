@@ -69,13 +69,13 @@ public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredic
     @Override 
     public void configureInputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
         Properties externalTableProperties = tableDesc.getProperties();
-        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties);
+        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties, tableDesc);
     }
     
     @Override
     public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
         Properties externalTableProperties = tableDesc.getProperties();
-        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties);
+        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties, tableDesc);
     }
     
     @Override

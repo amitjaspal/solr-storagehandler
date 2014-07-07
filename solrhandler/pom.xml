@@ -30,7 +30,7 @@
     <dependency>
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-metastore</artifactId>
-        <version>0.9.0</version>
+        <version>0.12.0</version>
     </dependency>
     
     <dependency>

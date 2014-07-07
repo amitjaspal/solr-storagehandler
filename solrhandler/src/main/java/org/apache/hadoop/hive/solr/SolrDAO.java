@@ -25,13 +25,7 @@ public class SolrDAO{
         this.shardName = shardName;
         this.collectionName = collectionName;
         this.solrServer = new HttpSolrServer(this.nodeURL + "/" + this.shardName);
-        currentPosition = 0;
-        
-        query = new SolrQuery();
-        query.setQuery( "chetan" );
-        query.set("wt", "json");
-        query.set("indent", "true");
-        query.set("fl", "id, author, title, price");
+        this.currentPosition = 0;
     }
  
     public void setQuery(SolrQuery query){

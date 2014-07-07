@@ -20,13 +20,8 @@ class HiveSolrSplit extends FileSplit {
     private SolrInputSplit solrSplit;
     private Path path;
     
-    // Its strange that Hive tries to call the default constructor for HiveSolrSplit
-    // because as part of getSplits we are already exposing the splits. It also expects
-    // the path to be "hdfs://localhost:8020/user/hive/warehouse/books" even though
-    // the table has been defined external.
-    // Hard coding this for now.
     public HiveSolrSplit(){
-       this(new SolrInputSplit(), new Path("hdfs://localhost:8020/user/hive/warehouse/books"));
+       this(new SolrInputSplit(), new Path("hdfs://localhost:8020/user/hive/warehouse/"));
     }
     
     HiveSolrSplit(SolrInputSplit solrSplit, Path path){

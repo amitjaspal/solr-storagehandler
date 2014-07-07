@@ -18,6 +18,7 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.common.cloud.ClusterState;
 import org.apache.solr.common.cloud.Replica;
@@ -34,7 +35,7 @@ public class SolrInputFormat implements InputFormat<LongWritable, MapWritable>{
         Collection<Slice> slices;
         
         // ToDo : remove hard-coding for the path.
-        Path path = new Path("hdfs://localhost:8020/user/hive/warehouse/books");
+        Path path = new Path("hdfs://localhost:8020/user/hive/warehouse/");
         
         String zooKeeperAddress = job.get(ExternalTableProperties.ZOOKEEPER_SERVICE_URL);
         try{
@@ -74,7 +75,8 @@ public class SolrInputFormat implements InputFormat<LongWritable, MapWritable>{
         // There are two parts to query 
         // 1. Query passed while creating table.
         // 2. Filter query while adding predicate pushdown.
-        String solrQuery = formSolrQuery(job);
+        SolrQuery solrQuery = QueryBuilder.buildQuery(job);
+        solrDAO.setQuery(solrQuery);
         return new SolrRecordReader(split, solrDAO);
     }
     
