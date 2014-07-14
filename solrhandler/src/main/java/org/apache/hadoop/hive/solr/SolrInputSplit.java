@@ -7,7 +7,10 @@ import java.io.IOException;
 import org.apache.hadoop.mapred.InputSplit;
 
 /*
- * SolrInputSplit defines 
+ * SolrInputSplit defines the properties corresponding to each Input Split.
+ * We are currently considering each shard of the collection to act as a 
+ * split. So data will be read from each shard in parallel by individual 
+ * mappers when a select query is fired.
  */
 public class SolrInputSplit implements InputSplit{
     

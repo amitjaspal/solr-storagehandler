@@ -15,7 +15,6 @@ public class SolrRecordReader implements RecordReader<LongWritable, MapWritable>
     private Integer currentPosition;
     
     public SolrRecordReader(InputSplit solrSplit, SolrDAO solrDAO){
-       // this.hiveSolrSplit = (HiveSolrSplit)solrSplit;
         this.currentPosition = 0;
         this.solrDAO = solrDAO;
     }
@@ -41,20 +40,23 @@ public class SolrRecordReader implements RecordReader<LongWritable, MapWritable>
     
     @Override
     public float getProgress() throws IOException{
+        if(solrDAO.getLength() == 0) return 0.0f;
         return currentPosition / solrDAO.getLength();
     }
     
     @Override
     public boolean next(LongWritable key, MapWritable value){
         SolrDocument doc = solrDAO.getNextDoc();
-        if( doc == null) return false;
-        key.set(currentPosition);
-        
-        for(String field : doc.getFieldNames()){
-            String val = doc.getFieldValue(field).toString();
-            value.put(new Text(field), new Text(val));
+        if( doc == null) {
+            return false;
+        }else{
+            key.set(currentPosition);
+            for(String field : doc.getFieldNames()){
+                String val = doc.getFieldValue(field).toString();
+                value.put(new Text(field), new Text(val));
+            }
+            return true;
         }
-        return true;
     }
     
 }

@@ -8,6 +8,7 @@ import java.util.Map;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator.RecordWriter;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
+//import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.solr.common.SolrInputDocument;
 
 public class SolrRecordWriter implements RecordWriter{ 
@@ -34,6 +35,8 @@ public class SolrRecordWriter implements RecordWriter{
     
     @Override
     public void close(boolean f) throws IOException{
-        // will be used when applying batching.
+        
+        System.out.println("Commiting solr DAO");
+        solrDAO.commit();
     }
 }

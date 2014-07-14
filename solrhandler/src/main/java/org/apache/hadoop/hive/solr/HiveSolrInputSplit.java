@@ -7,24 +7,26 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
+import org.apache.hadoop.mapred.FileOutputFormat;
 
 /*
- * HiveSolrSplit is just a wrapper class on top of SolrSplit. It seems 
- * Hive considers data sources to be of FileFormat so we need to define
+ * HiveSolrInputSplit is just a wrapper class on top of SolrSplit. It seems 
+ * Hive considers all data sources to be of FileFormat so we need to define
  * the wrapper class HiveSolrSplit which extends from FileSplit.
  * Under the hood all functionalities are delegated to SolrSplit 
  * only.
  */
-class HiveSolrSplit extends FileSplit {
+
+class HiveSolrInputSplit extends FileSplit {
     
     private SolrInputSplit solrSplit;
     private Path path;
     
-    public HiveSolrSplit(){
-       this(new SolrInputSplit(), new Path("hdfs://localhost:8020/user/hive/warehouse/"));
+    public HiveSolrInputSplit(){
+       this(new SolrInputSplit(), new Path(" "));
     }
     
-    HiveSolrSplit(SolrInputSplit solrSplit, Path path){
+    HiveSolrInputSplit(SolrInputSplit solrSplit, Path path){
         super(path, 0, 0, (String[]) null);
         this.solrSplit = solrSplit;
         this.path = path;

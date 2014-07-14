@@ -10,9 +10,10 @@ import org.apache.hadoop.hive.ql.plan.TableDesc;
 
 /*
  * ExternalTableProperties is a holder to keep all the
- * properties of the external table.
- * 
+ * properties of the SOLR backed external table which the user.
+ * provided while issuing the CREATE EXTERNAL TABLE command
  */
+
 public class ExternalTableProperties {
 
     static final String ZOOKEEPER_SERVICE_URL = "solr.zookeeper.service.url";
@@ -33,9 +34,13 @@ public class ExternalTableProperties {
         System.out.println("Reading table property collection name " + collectionName);
         jobProperties.put(COLLECTION_NAME, collectionName);
         
-        // Set solr query in the jobProperty
+        // Set SOLR query in the jobProperty
         String query = tableProperties.getProperty(SOLR_QUERY);
         System.out.println("Reading table property solr query " + query);
+        if(query == null){
+            query = "*:*";
+        }
+        
         jobProperties.put(SOLR_QUERY, query);
         
         String colNamesStr = tableDesc.getProperties().getProperty(hive_metastoreConstants.META_TABLE_COLUMNS);

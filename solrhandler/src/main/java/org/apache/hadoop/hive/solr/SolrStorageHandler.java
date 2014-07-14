@@ -53,7 +53,7 @@ public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredic
     
     @Override
     public HiveMetaHook getMetaHook(){
-        return null;
+        return new SolrMetaHook();
     }
 
     @Override
@@ -90,14 +90,11 @@ public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredic
     
     @Override
     public DecomposedPredicate decomposePredicate(JobConf entries, Deserializer deserializer, ExprNodeDesc exprNodeDesc ){
-        IndexPredicateAnalyzer analyzer = SolrInputFormat.getPredicateAnalyzer();
+        IndexPredicateAnalyzer analyzer = PredicateAnalyzer.getPredicateAnalyzer();
         List<IndexSearchCondition> searchConditions = new ArrayList<IndexSearchCondition>();
         ExprNodeDesc residualPredicate = analyzer.analyzePredicate(exprNodeDesc, searchConditions);
         DecomposedPredicate decomposedPredicate = new DecomposedPredicate();
         decomposedPredicate.pushedPredicate = analyzer.translateSearchConditions(searchConditions);
-
-        // Need to check this, base class reference should be able to point
-        // to derived class without a cast.
         decomposedPredicate.residualPredicate = (ExprNodeGenericFuncDesc) residualPredicate;
         return decomposedPredicate;
     }

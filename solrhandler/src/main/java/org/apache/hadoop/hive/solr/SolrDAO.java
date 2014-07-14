@@ -1,5 +1,6 @@
 package org.apache.hadoop.hive.solr;
 
+import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.solr.client.solrj.SolrQuery;
@@ -18,6 +19,7 @@ public class SolrDAO{
     private HttpSolrServer solrServer;
     private SolrDocumentList resultSet;
     private Integer currentPosition;
+    private Long size;
     private SolrQuery query;
     
     SolrDAO(String nodeURL, String shardName, String collectionName){
@@ -26,12 +28,22 @@ public class SolrDAO{
         this.collectionName = collectionName;
         this.solrServer = new HttpSolrServer(this.nodeURL + "/" + this.shardName);
         this.currentPosition = 0;
+        initSize();
     }
  
     public void setQuery(SolrQuery query){
         this.query = query;
     }
-
+    
+    private void initSize(){
+        try{
+            SolrQuery q = new SolrQuery("*:*");
+            q.setRows(0);  // don't actually request any data
+            size = solrServer.query(q).getResults().getNumFound();
+        }catch(SolrServerException e){
+            e.printStackTrace();
+        }
+    }
     public void executeQuery(){
 
         QueryResponse response = null;
@@ -40,7 +52,7 @@ public class SolrDAO{
             response = solrServer.query(query);
             
         }catch( SolrServerException e){
-            // do some logging about the failure of the query.
+            e.printStackTrace();
         }
         resultSet = response.getResults();
         System.out.println("result size == " + resultSet.size());
@@ -62,9 +74,29 @@ public class SolrDAO{
     public void saveDocs(Collection<SolrInputDocument> docs){
         try{
             solrServer.add(docs);
-            solrServer.commit();
+            
         }catch(Exception ex){
-            // Log errors.
+            
+        }
+    }
+    
+    public void saveDoc(SolrInputDocument doc){
+        try{
+            solrServer.add(doc);
+        }catch(Exception ex){
+            ex.printStackTrace();
+        }
+    }
+    
+    public void commit(){
+        
+        try{
+            solrServer.commit();
+        }catch(SolrServerException e){
+            e.printStackTrace();
+        }
+        catch(IOException e){
+            e.printStackTrace();
         }
     }
     

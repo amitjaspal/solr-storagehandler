@@ -7,8 +7,7 @@ import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.serde.serdeConstants;
-import org.apache.hadoop.hive.serde.Constants;
-import org.apache.hadoop.hive.serde2.SerDe;
+import org.apache.hadoop.hive.serde2.AbstractSerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.hive.serde2.SerDeStats;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
@@ -25,7 +24,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 
-public class SolrSerDe implements SerDe {
+public class SolrSerDe extends AbstractSerDe {
     static final String HIVE_TYPE_DOUBLE = "double";
     static final String HIVE_TYPE_FLOAT = "float";
     static final String HIVE_TYPE_BOOLEAN = "boolean";
@@ -45,35 +44,22 @@ public class SolrSerDe implements SerDe {
     @Override
     public void initialize(final Configuration conf, final Properties tbl)
             throws SerDeException {
-        /*final String columnString = tbl
-                .getProperty(ConfigurationUtil.COLUMN_MAPPING);
-        if (StringUtils.isBlank(columnString)) {
-            throw new SerDeException("No column mapping found, use "
-                    + ConfigurationUtil.COLUMN_MAPPING);
-        }
-        final String[] columnNamesArray = ConfigurationUtil
-                .getAllColumns(columnString);
-        fieldCount = columnNamesArray.length;
-        columnNames = new ArrayList<String>(columnNamesArray.length);
-        columnNames.addAll(Arrays.asList(columnNamesArray)); */
-        
+
         String colNamesStr = tbl.getProperty(serdeConstants.LIST_COLUMNS);
-        System.out.println("Col Names : " + colNamesStr);
         String[] columnNamesArray = colNamesStr.split(",");  
         columnNames = Arrays.asList(colNamesStr.split(","));
         fieldCount = columnNamesArray.length;
         
-        String hiveColumnNameProperty = tbl.getProperty(Constants.LIST_COLUMNS);
+        String hiveColumnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);
         List<String> hiveColumnNameArray = new ArrayList<String>();
         
         if (hiveColumnNameProperty != null && hiveColumnNameProperty.length() > 0) {
             hiveColumnNameArray = Arrays.asList(hiveColumnNameProperty.split(","));
         }
         
-        String columnTypeProperty = tbl
-                .getProperty(Constants.LIST_COLUMN_TYPES);
-        // System.err.println("column types:" + columnTypeProperty);
+        String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
         columnTypesArray = columnTypeProperty.split(":");
+ 
         final List<ObjectInspector> fieldOIs = new ArrayList<ObjectInspector>(
                 columnNamesArray.length);
         for (int i = 0; i < columnNamesArray.length; i++) {
@@ -124,10 +110,7 @@ public class SolrSerDe implements SerDe {
             t.set(columnNames.get(i));
             final Writable value = input.get(t);
             if (value != null && !NullWritable.get().equals(value)) {
-                //parse as double to avoid NumberFormatException...
-                //TODO:need more test,especially for type 'bigint'
-                System.out.println(value.toString());
-                if (HIVE_TYPE_INT.equalsIgnoreCase(columnTypesArray[i])) {
+                 if (HIVE_TYPE_INT.equalsIgnoreCase(columnTypesArray[i])) {
                     row.add(Double.valueOf(value.toString()).intValue());
                 } else if (SolrSerDe.HIVE_TYPE_SMALLINT.equalsIgnoreCase(columnTypesArray[i])) {
                     row.add(Double.valueOf(value.toString()).shortValue());

@@ -7,9 +7,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator.RecordWriter;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
+import org.apache.hadoop.hive.shims.ShimLoader;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.Progressable;
 
 import com.sun.rowset.internal.Row;
@@ -17,12 +20,10 @@ import com.sun.rowset.internal.Row;
 
 
 @SuppressWarnings("rawtypes")
-public class SolrOutputFormat implements HiveOutputFormat <NullWritable, Row>{
+public class SolrOutputFormat implements HiveOutputFormat<NullWritable, Row>
+ {
     
-    public void checkOutputSpecs(FileSystem ignored, JobConf job) throws IOException{
-        
-    }
-    
+    @Override
     public org.apache.hadoop.mapred.RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
             String name, Progressable progress) throws IOException {
         // Hive will not call this method.
@@ -37,6 +38,7 @@ public class SolrOutputFormat implements HiveOutputFormat <NullWritable, Row>{
         // Need to figure out how to improve the degree of parallelism.
         // For now we will just have 1 shard inserting all the documents.
         
+        System.out.println("Returning record writer - ");
         String baseURL = "http://ubuntu:8983/solr";
         String shardName = "collection2_shard1_replica1";
         String collectionName = "collection2";
@@ -44,7 +46,13 @@ public class SolrOutputFormat implements HiveOutputFormat <NullWritable, Row>{
         return new SolrRecordWriter(solrDAO);
     }
 
-    
+    @Override
+    public void checkOutputSpecs(FileSystem ignored, JobConf jc) throws IOException{
+        /*System.out.println("Setting number of reduce jobs to 2");
+        jc.setNumReduceTasks(2);
+        Job job = new Job(jc);
+        JobContext jobContext = ShimLoader.getHadoopShims().newJobContext(job); */
+    }
     
 
 }
