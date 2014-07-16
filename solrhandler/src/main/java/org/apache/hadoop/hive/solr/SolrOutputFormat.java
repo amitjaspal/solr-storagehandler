@@ -42,7 +42,7 @@ public class SolrOutputFormat implements HiveOutputFormat<NullWritable, Row>
         String baseURL = "http://ubuntu:8983/solr";
         String shardName = "collection2_shard1_replica1";
         String collectionName = "collection2";
-        SolrDAO solrDAO = new SolrDAO(baseURL, shardName, collectionName);
+        SolrDAO solrDAO = new SolrDAO(baseURL, shardName, collectionName, null);
         return new SolrRecordWriter(solrDAO);
     }
 

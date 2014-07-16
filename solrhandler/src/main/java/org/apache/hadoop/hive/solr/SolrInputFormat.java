@@ -58,9 +58,10 @@ public class SolrInputFormat implements InputFormat<LongWritable, MapWritable>{
         
         HiveSolrInputSplit hiveSolrSplit = (HiveSolrInputSplit)split;
         SolrInputSplit solrInputSplit = hiveSolrSplit.getSolrSplit();
-        SolrDAO solrDAO = new SolrDAO(solrInputSplit.getNodeURL(), solrInputSplit.getShardName(), 
-                                      solrInputSplit.getCollectionName());
         SolrQuery solrQuery = QueryBuilder.buildQuery(job);
+        SolrDAO solrDAO = new SolrDAO(solrInputSplit.getNodeURL(), solrInputSplit.getShardName(), 
+                                      solrInputSplit.getCollectionName(), solrQuery);
+        
         solrDAO.setQuery(solrQuery);
         return new SolrRecordReader(split, solrDAO);
     }

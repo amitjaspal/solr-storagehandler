@@ -2,6 +2,7 @@ package org.apache.hadoop.hive.solr;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.concurrent.CyclicBarrier;
 
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -11,6 +12,49 @@ import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
 
+class SolrDocumentExtracter implements Runnable{
+    
+    private Integer start;
+    private Integer window;
+    private Long size;
+    private SolrQuery query;
+    private SolrDocumentList buffer;
+    private HttpSolrServer solrServer;
+    private CyclicBarrier cb;
+    
+    SolrDocumentExtracter(Integer start, Integer window, Long size, SolrQuery query,
+                          HttpSolrServer solrServer, SolrDocumentList buffer, CyclicBarrier cb) {
+        this.start = start;
+        this.window = window;
+        this.size = size;
+        this.query = query;
+        this.solrServer = solrServer;
+        this.buffer = buffer;
+        this.cb = cb;
+    }
+    
+    public void run(){
+       
+        QueryResponse response = null;
+        buffer.clear();
+        try{
+            query.setStart(start);
+            query.setRows(window);
+            response = solrServer.query(query);
+        }catch( SolrServerException e){
+            e.printStackTrace();
+        }
+        buffer.addAll(response.getResults());
+        System.out.println("result size == " + buffer.size());
+        start = start + window;
+        try{
+            cb.await();
+        }catch(Exception ex){ // TODO: Catch proper exceptions
+            ex.printStackTrace();
+        }
+    }
+}
+
 public class SolrDAO{
 
     private String nodeURL;
@@ -18,55 +62,75 @@ public class SolrDAO{
     private String collectionName;
     private HttpSolrServer solrServer;
     private SolrDocumentList resultSet;
+    private SolrDocumentList buffer;
     private Integer currentPosition;
+    private Integer start;
+    private Integer window;
     private Long size;
     private SolrQuery query;
+    private Thread T;
+    private CyclicBarrier cb;
     
-    SolrDAO(String nodeURL, String shardName, String collectionName){
+    SolrDAO(String nodeURL, String shardName, String collectionName, SolrQuery query){
         this.nodeURL = nodeURL;
         this.shardName = shardName;
         this.collectionName = collectionName;
         this.solrServer = new HttpSolrServer(this.nodeURL + "/" + this.shardName);
         this.currentPosition = 0;
+        this.query = query;
+        this.start = 0;
+        this.window = 10;
         initSize();
+        this.buffer = new SolrDocumentList();
+        this.resultSet = new SolrDocumentList();
+        this.cb=new CyclicBarrier(2);
+        T = new Thread(new SolrDocumentExtracter(start, window, size, query, solrServer, buffer,cb));
+        T.start();
     }
  
     public void setQuery(SolrQuery query){
-        this.query = query;
+         this.query = query;
     }
     
     private void initSize(){
         try{
-            SolrQuery q = new SolrQuery("*:*");
-            q.setRows(0);  // don't actually request any data
-            size = solrServer.query(q).getResults().getNumFound();
+            
+            query.setRows(0);  // don't actually request any data
+            size = solrServer.query(query).getResults().getNumFound();
+            System.out.println("size for the query results = " + size);
         }catch(SolrServerException e){
             e.printStackTrace();
         }
     }
-    public void executeQuery(){
-
-        QueryResponse response = null;
-        System.out.println("Executing Query !!");
-        try{
-            response = solrServer.query(query);
-            
-        }catch( SolrServerException e){
-            e.printStackTrace();
-        }
-        resultSet = response.getResults();
-        System.out.println("result size == " + resultSet.size());
-    }
-    
+   
     public SolrDocument getNextDoc(){
         
-        
-        if(currentPosition == 0){
-            executeQuery();
+        if(currentPosition >= size){
+            try{
+                cb.await();
+            }catch(Exception ex){
+                ex.printStackTrace();
+            }
+            return null;
         }
-        if(resultSet == null || currentPosition >= resultSet.size()) return null;
         
-        SolrDocument nextDoc = resultSet.get(currentPosition);
+        if(currentPosition % window == 0){
+            resultSet.clear();
+            try{
+                cb.await();
+            }catch(Exception ex){
+                ex.printStackTrace();
+            }
+            cb.reset();
+            for(int i = 0;i<buffer.size();i++){
+                resultSet.add(buffer.get(i));
+            }
+            buffer.clear();
+            T = new Thread(new SolrDocumentExtracter(start, window, size, query, solrServer, buffer,cb));
+            T.start();
+        }
+        
+        SolrDocument nextDoc = resultSet.get(currentPosition % window);
         currentPosition++;
         return nextDoc;
     }
@@ -74,9 +138,8 @@ public class SolrDAO{
     public void saveDocs(Collection<SolrInputDocument> docs){
         try{
             solrServer.add(docs);
-            
         }catch(Exception ex){
-            
+            ex.printStackTrace();
         }
     }
     
