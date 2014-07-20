@@ -2,59 +2,15 @@ package org.apache.hadoop.hive.solr;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.impl.HttpSolrServer;
-import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.SolrInputDocument;
-
-class SolrDocumentExtracter implements Runnable{
-    
-    private Integer start;
-    private Integer window;
-    private Long size;
-    private SolrQuery query;
-    private SolrDocumentList buffer;
-    private HttpSolrServer solrServer;
-    private CyclicBarrier cb;
-    
-    SolrDocumentExtracter(Integer start, Integer window, Long size, SolrQuery query,
-                          HttpSolrServer solrServer, SolrDocumentList buffer, CyclicBarrier cb) {
-        this.start = start;
-        this.window = window;
-        this.size = size;
-        this.query = query;
-        this.solrServer = solrServer;
-        this.buffer = buffer;
-        this.cb = cb;
-    }
-    
-    public void run(){
-       
-        QueryResponse response = null;
-        buffer.clear();
-        try{
-            query.setStart(start);
-            query.setRows(window);
-            response = solrServer.query(query);
-        }catch( SolrServerException e){
-            e.printStackTrace();
-        }
-        buffer.addAll(response.getResults());
-        System.out.println("result size == " + buffer.size());
-        try{
-            cb.await();
-        }catch(Exception ex){ // TODO: Catch proper exceptions
-            ex.printStackTrace();
-        }
-    }
-}
 
 public class SolrDAO{
 
@@ -62,16 +18,19 @@ public class SolrDAO{
     private String shardName;
     private String collectionName;
     private HttpSolrServer solrServer;
-    private SolrDocumentList resultSet;
+    private SolrDocumentList inputDocs;
     private SolrDocumentList inputBuffer;
     private List<SolrInputDocument> outputBuffer;
+    private List<SolrInputDocument> outputDocs;
     private Integer currentPosition;
-    private Integer start;
-    private Integer window;
+    private Integer start; // TODO: Move the start and window to job configuration
+    private Integer window;// rather than hard coding it here.  
     private Long size;
     private SolrQuery query;
     private Thread T;
-    private CyclicBarrier cb;
+    private CyclicBarrier readerCB;
+    private CyclicBarrier writerCB;
+    private Boolean isWriterThreadInitiated;
     
     SolrDAO(String nodeURL, String shardName, String collectionName, SolrQuery query){
         this.nodeURL = nodeURL;
@@ -85,12 +44,15 @@ public class SolrDAO{
         if(query != null){
             initSize();
             this.inputBuffer = new SolrDocumentList();
-            this.resultSet = new SolrDocumentList();
-            this.cb=new CyclicBarrier(2);
-            T = new Thread(new SolrDocumentExtracter(start, window, size, query, solrServer, inputBuffer,cb));
+            this.inputDocs = new SolrDocumentList();
+            this.readerCB=new CyclicBarrier(2);
+            T = new Thread(new SolrBatchReader(start, window, size, query, solrServer, inputBuffer,readerCB));
             T.start();
         }else{
             this.outputBuffer = new ArrayList<SolrInputDocument>();
+            this.outputDocs = new ArrayList<SolrInputDocument>();
+            this.writerCB=new CyclicBarrier(2);
+            this.isWriterThreadInitiated = false;
         }
     }
  
@@ -113,7 +75,7 @@ public class SolrDAO{
         
         if(currentPosition >= size){
             try{
-                cb.await();
+                readerCB.await();
             }catch(Exception ex){
                 ex.printStackTrace();
             }
@@ -121,43 +83,57 @@ public class SolrDAO{
         }
         
         if(currentPosition % window == 0){
-            resultSet.clear();
+            inputDocs.clear();
             try{
-                cb.await();
+                readerCB.await();
             }catch(Exception ex){
                 ex.printStackTrace();
             }
-            cb.reset();
+            readerCB.reset();
             for(int i = 0;i<inputBuffer.size();i++){
-                resultSet.add(inputBuffer.get(i));
+                inputDocs.add(inputBuffer.get(i));
             }
             inputBuffer.clear();
             start = start + window;
-            T = new Thread(new SolrDocumentExtracter(start, window, size, query, solrServer, inputBuffer,cb));
+            T = new Thread(new SolrBatchReader(start, window, size, query, solrServer, inputBuffer,readerCB));
             T.start();
         }
         
-        SolrDocument nextDoc = resultSet.get(currentPosition % window);
+        SolrDocument nextDoc = inputDocs.get(currentPosition % window);
         currentPosition++;
         return nextDoc;
     }
     
-    public void saveDocs(Collection<SolrInputDocument> docs){
-        try{
-            solrServer.add(docs);
-        }catch(Exception ex){
-            ex.printStackTrace();
-        }
-    }
-    
     public void saveDoc(SolrInputDocument doc){
-        outputBuffer.add(doc);
+        outputDocs.add(doc);
+        
+        if(outputDocs.size() == window){
+            if(isWriterThreadInitiated){
+                try{
+                    writerCB.await();
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                }
+            
+                writerCB.reset();
+            }
+            outputBuffer.clear();
+            for(int i = 0;i<outputDocs.size();i++){
+                outputBuffer.add(outputDocs.get(i));
+            }
+            outputDocs.clear();
+            T = new Thread(new SolrBatchWriter(solrServer, outputBuffer,writerCB));
+            T.start();
+            isWriterThreadInitiated = true;
+        }
     }
     
     public void commit(){
         
         try{
-            solrServer.add(outputBuffer);
+            if(outputDocs.size() > 0){
+                solrServer.add(outputDocs);
+            }    
             solrServer.commit();
         }catch(SolrServerException e){
             e.printStackTrace();
@@ -165,10 +141,11 @@ public class SolrDAO{
         catch(IOException e){
             e.printStackTrace();
         }
+        isWriterThreadInitiated = false;
     }
     
     public long getLength(){
-        return resultSet.size();
+        return inputDocs.size();
     }
 
     public String getNodeURL() {

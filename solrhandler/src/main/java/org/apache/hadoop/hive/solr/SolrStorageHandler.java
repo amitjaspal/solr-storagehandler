@@ -21,11 +21,6 @@ import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
 
-/*
- * SolrStorageHandler is used to plug-in SOLR backed data
- * sources in Hive.
- * ToDo: 1. Remove the deprecated SerDe, DeSerializer. 
- */
 
 public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredicateHandler{
     

@@ -25,12 +25,11 @@ import org.apache.hadoop.io.Writable;
 
 
 public class SolrSerDe extends AbstractSerDe {
+    // Currently we support only int, float, double, boolean, string 
+    // data types through SolrSerDe
     static final String HIVE_TYPE_DOUBLE = "double";
     static final String HIVE_TYPE_FLOAT = "float";
     static final String HIVE_TYPE_BOOLEAN = "boolean";
-    static final String HIVE_TYPE_BIGINT = "bigint";
-    static final String HIVE_TYPE_TINYINT = "tinyint";
-    static final String HIVE_TYPE_SMALLINT = "smallint";
     static final String HIVE_TYPE_INT = "int";
 
     private final MapWritable cachedWritable = new MapWritable();
@@ -38,7 +37,7 @@ public class SolrSerDe extends AbstractSerDe {
     private int fieldCount;
     private StructObjectInspector objectInspector;
     private List<String> columnNames;
-    String[] columnTypesArray;
+    private String[] columnTypesArray;
     private List<Object> row;
     
     @Override
@@ -49,14 +48,6 @@ public class SolrSerDe extends AbstractSerDe {
         String[] columnNamesArray = colNamesStr.split(",");  
         columnNames = Arrays.asList(colNamesStr.split(","));
         fieldCount = columnNamesArray.length;
-        
-        String hiveColumnNameProperty = tbl.getProperty(serdeConstants.LIST_COLUMNS);
-        List<String> hiveColumnNameArray = new ArrayList<String>();
-        
-        if (hiveColumnNameProperty != null && hiveColumnNameProperty.length() > 0) {
-            hiveColumnNameArray = Arrays.asList(hiveColumnNameProperty.split(","));
-        }
-        
         String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
         columnTypesArray = columnTypeProperty.split(":");
  
@@ -66,15 +57,6 @@ public class SolrSerDe extends AbstractSerDe {
             if (HIVE_TYPE_INT.equalsIgnoreCase(columnTypesArray[i])) {
                 fieldOIs
                         .add(PrimitiveObjectInspectorFactory.javaIntObjectInspector);
-            } else if (SolrSerDe.HIVE_TYPE_SMALLINT.equalsIgnoreCase(columnTypesArray[i])) {
-                fieldOIs
-                        .add(PrimitiveObjectInspectorFactory.javaShortObjectInspector);
-            } else if (SolrSerDe.HIVE_TYPE_TINYINT.equalsIgnoreCase(columnTypesArray[i])) {
-                fieldOIs
-                        .add(PrimitiveObjectInspectorFactory.javaByteObjectInspector);
-            } else if (SolrSerDe.HIVE_TYPE_BIGINT.equalsIgnoreCase(columnTypesArray[i])) {
-                fieldOIs
-                        .add(PrimitiveObjectInspectorFactory.javaLongObjectInspector);
             } else if (SolrSerDe.HIVE_TYPE_BOOLEAN.equalsIgnoreCase(columnTypesArray[i])) {
                 fieldOIs
                         .add(PrimitiveObjectInspectorFactory.javaBooleanObjectInspector);
@@ -91,17 +73,18 @@ public class SolrSerDe extends AbstractSerDe {
             }
         }
         objectInspector = ObjectInspectorFactory
-                .getStandardStructObjectInspector(hiveColumnNameArray, fieldOIs);
+                .getStandardStructObjectInspector(columnNames, fieldOIs);
         row = new ArrayList<Object>(columnNamesArray.length);
     }
 
     @Override
     public Object deserialize(Writable wr) throws SerDeException {
+        
         if (!(wr instanceof MapWritable)) {
             throw new SerDeException("Expected MapWritable, received "
                     + wr.getClass().getName());
         }
-        System.out.println("Deserializing data");
+        
         final MapWritable input = (MapWritable) wr;
         final Text t = new Text();
         row.clear();
@@ -112,13 +95,7 @@ public class SolrSerDe extends AbstractSerDe {
             if (value != null && !NullWritable.get().equals(value)) {
                  if (HIVE_TYPE_INT.equalsIgnoreCase(columnTypesArray[i])) {
                     row.add(Double.valueOf(value.toString()).intValue());
-                } else if (SolrSerDe.HIVE_TYPE_SMALLINT.equalsIgnoreCase(columnTypesArray[i])) {
-                    row.add(Double.valueOf(value.toString()).shortValue());
-                } else if (SolrSerDe.HIVE_TYPE_TINYINT.equalsIgnoreCase(columnTypesArray[i])) {
-                    row.add(Double.valueOf(value.toString()).byteValue());
-                } else if (SolrSerDe.HIVE_TYPE_BIGINT.equalsIgnoreCase(columnTypesArray[i])) {
-                    row.add(Long.valueOf(value.toString()));
-                } else if (SolrSerDe.HIVE_TYPE_BOOLEAN.equalsIgnoreCase(columnTypesArray[i])) {
+                }else if (SolrSerDe.HIVE_TYPE_BOOLEAN.equalsIgnoreCase(columnTypesArray[i])) {
                     row.add(Boolean.valueOf(value.toString()));
                 } else if (SolrSerDe.HIVE_TYPE_FLOAT.equalsIgnoreCase(columnTypesArray[i])) {
                     row.add(Double.valueOf(value.toString()).floatValue());
@@ -132,7 +109,6 @@ public class SolrSerDe extends AbstractSerDe {
                 row.add(null);
             }
         }
-
         return row;
     }
 
@@ -149,6 +125,7 @@ public class SolrSerDe extends AbstractSerDe {
     @Override
     public Writable serialize(final Object obj, final ObjectInspector inspector)
             throws SerDeException {
+        
         final StructObjectInspector structInspector = (StructObjectInspector) inspector;
         final List<? extends StructField> fields = structInspector
                 .getAllStructFieldRefs();
@@ -163,10 +140,10 @@ public class SolrSerDe extends AbstractSerDe {
             StructField structField = fields.get(c);
             if (structField != null) {
                 final Object field = structInspector.getStructFieldData(obj,
-                        fields.get(c));
+                        structField);
                 
                 //TODO:currently only support hive primitive type
-                final AbstractPrimitiveObjectInspector fieldOI = (AbstractPrimitiveObjectInspector)fields.get(c)
+                final AbstractPrimitiveObjectInspector fieldOI = (AbstractPrimitiveObjectInspector)structField
                         .getFieldObjectInspector();
 
                 Writable value = (Writable)fieldOI.getPrimitiveWritableObject(field);
@@ -174,9 +151,7 @@ public class SolrSerDe extends AbstractSerDe {
                 if (value == null) {
                     if(PrimitiveCategory.STRING.equals(fieldOI.getPrimitiveCategory())){
                         value = NullWritable.get(); 
-                        //value = new Text("");
                     }else{
-                        //TODO: now all treat as number
                         value = new IntWritable(0);
                     }
                 }
