@@ -5,8 +5,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
+
 
 /*
  * ExternalTableProperties is a holder to keep all the
@@ -20,23 +24,25 @@ public class ExternalTableProperties {
     static final String COLLECTION_NAME = "solr.collection.name";
     static final String SOLR_QUERY = "solr.query";
     static List<String> COLUMN_NAMES;
+    private Configuration conf;
+    static final Log LOG = LogFactory.getLog(SolrStorageHandler.class);
     
     public static void configureExternalTableProperties(Properties tableProperties, Map<String,String> jobProperties,
                                                         TableDesc tableDesc){
         
         // Set zookeeper.service.url in the jobProperty
         String zookeeperService = tableProperties.getProperty(ZOOKEEPER_SERVICE_URL);
-        System.out.println("Reading table property zookeeper url " + zookeeperService);
+        LOG.debug("Reading table property zookeeper url " + zookeeperService);
         jobProperties.put(ZOOKEEPER_SERVICE_URL, zookeeperService);
         
         // Set collection.name in the jobProperty
         String collectionName = tableProperties.getProperty(COLLECTION_NAME);
-        System.out.println("Reading table property collection name " + collectionName);
+        LOG.debug("Reading table property collection name " + collectionName);
         jobProperties.put(COLLECTION_NAME, collectionName);
         
         // Set SOLR query in the jobProperty
         String query = tableProperties.getProperty(SOLR_QUERY);
-        System.out.println("Reading table property solr query " + query);
+        LOG.debug("Reading table property solr query " + query);
         if(query == null){
             query = "*:*";
         }
