@@ -29,8 +29,6 @@ import org.apache.hadoop.hive.ql.exec.FileSinkOperator.RecordWriter;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.Progressable;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
@@ -46,29 +44,29 @@ import com.sun.rowset.internal.Row;
 @SuppressWarnings("rawtypes")
 public class SolrOutputFormat implements HiveOutputFormat<NullWritable, Row>
  {
-    
+
     @Override
     public org.apache.hadoop.mapred.RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
             String name, Progressable progress) throws IOException {
         // Hive will not call this method.
         return null;
     }
-    
+
     @Override
     public RecordWriter getHiveRecordWriter(JobConf jc, Path finalOutPath,
             final Class<? extends Writable> valueClass, boolean isCompressed,
             Properties tableProperties, Progressable progress) throws IOException{
-        
+
         // Need to figure out how to improve the degree of parallelism.
         // For now we will just have 1 shard insert all the documents.
-        
+
         CloudSolrServer cloudServer = null;
-        ZkStateReader stateReader; 
+        ZkStateReader stateReader;
         Collection<Slice> slices;
         String zooKeeperAddress = jc.get(ExternalTableProperties.ZOOKEEPER_SERVICE_URL);
         try{
             cloudServer = new CloudSolrServer(zooKeeperAddress);
-        }catch(MalformedURLException ex){
+        }catch(Exception ex){
             ex.printStackTrace();
         }
         cloudServer.connect();
@@ -86,8 +84,8 @@ public class SolrOutputFormat implements HiveOutputFormat<NullWritable, Row>
     @Override
     public void checkOutputSpecs(FileSystem ignored, JobConf jc) throws IOException{
        //TODO: check if collection name, zookeeper service is set in JobConf.
-        
+
     }
-    
+
 
 }

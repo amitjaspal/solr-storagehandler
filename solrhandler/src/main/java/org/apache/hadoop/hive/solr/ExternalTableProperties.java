@@ -7,7 +7,6 @@ import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.api.hive_metastoreConstants;
 import org.apache.hadoop.hive.ql.plan.TableDesc;
 
@@ -24,9 +23,9 @@ public class ExternalTableProperties {
     static final String COLLECTION_NAME = "solr.collection.name";
     static final String SOLR_QUERY = "solr.query";
     static List<String> COLUMN_NAMES;
-    private Configuration conf;
     static final Log LOG = LogFactory.getLog(SolrStorageHandler.class);
     
+    // TODO: Add comments
     public static void configureExternalTableProperties(Properties tableProperties, Map<String,String> jobProperties,
                                                         TableDesc tableDesc){
         
@@ -46,7 +45,7 @@ public class ExternalTableProperties {
         if(query == null){
             query = "*:*";
         }
-        
+        // TODO: Set the property back into tableDesc
         jobProperties.put(SOLR_QUERY, query);
         
         String colNamesStr = tableDesc.getProperties().getProperty(hive_metastoreConstants.META_TABLE_COLUMNS);

@@ -20,6 +20,7 @@ package org.apache.hadoop.hive.solr;
 
 import java.net.MalformedURLException;
 import java.util.Collection;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -37,21 +38,22 @@ import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.ZkStateReader;
 
 public class SolrInputFormat implements InputFormat<LongWritable, MapWritable>{
-    
+
     @Override
     public InputSplit[] getSplits(JobConf job, int numSplits){
-        
+
         CloudSolrServer cloudServer = null;
-        ZkStateReader stateReader; 
+        ZkStateReader stateReader;
         Collection<Slice> slices;
         Path []result = FileInputFormat.getInputPaths(job);
         Path path = result[0];
         String zooKeeperAddress = job.get(ExternalTableProperties.ZOOKEEPER_SERVICE_URL);
         try{
             cloudServer = new CloudSolrServer(zooKeeperAddress);
-        }catch(MalformedURLException ex){
+        }catch(Exception ex){
             ex.printStackTrace();
         }
+        cloudServer.setDefaultCollection(job.get(ExternalTableProperties.COLLECTION_NAME));
         cloudServer.connect();
         stateReader = cloudServer.getZkStateReader();
         ClusterState cs = stateReader.getClusterState();
@@ -59,27 +61,27 @@ public class SolrInputFormat implements InputFormat<LongWritable, MapWritable>{
         InputSplit []inputSplits = new HiveSolrInputSplit[slices.size()];
         int i = 0;
         for(Slice slice : slices){
-            
+
             Replica leader = slice.getLeader();
             SolrInputSplit split = new SolrInputSplit(leader.getProperties().get("base_url").toString(), leader.getProperties().get("core").toString()
                                           , job.get(ExternalTableProperties.COLLECTION_NAME));
             inputSplits[i] = new HiveSolrInputSplit(split, path);
             i++;
         }
-        
+
         stateReader.close();
         return inputSplits;
     }
-    
+
     @Override
     public RecordReader<LongWritable, MapWritable> getRecordReader(InputSplit split, JobConf job, Reporter reporter){
-        
+
         HiveSolrInputSplit hiveSolrSplit = (HiveSolrInputSplit)split;
         SolrInputSplit solrInputSplit = hiveSolrSplit.getSolrSplit();
         SolrQuery solrQuery = QueryBuilder.buildQuery(job);
-        SolrDAO solrDAO = new SolrDAO(solrInputSplit.getNodeURL(), solrInputSplit.getShardName(), 
+        SolrDAO solrDAO = new SolrDAO(solrInputSplit.getNodeURL(), solrInputSplit.getShardName(),
                                       solrInputSplit.getCollectionName(), solrQuery);
-        
+
         solrDAO.setQuery(solrQuery);
         return new SolrRecordReader(split, solrDAO);
     }

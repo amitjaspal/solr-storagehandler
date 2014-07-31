@@ -27,10 +27,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
 
 /*
- * HiveSolrInputSplit is just a wrapper class on top of SolrSplit. It seems 
- * Hive considers all data sources to be of FileFormat so we need to define
- * the wrapper class HiveSolrSplit which extends from FileSplit.
- * Under the hood all functionalities are delegated to SolrSplit 
+ * HiveSolrInputSplit is just a wrapper class on top of SolrInputSplit. It seems 
+ * Hive considers all data sources to be of FileInputFormat so we need to define
+ * the wrapper class HiveSolrInputSplit which extends from FileInputSplit.
+ * Under the hood all functionalities are delegated to SolrInputSplit 
  * only.
  */
 
@@ -49,10 +49,12 @@ class HiveSolrInputSplit extends FileSplit {
         this.path = path;
     }
     
+    @Override
     public long getLength() {
         return 1l;
     }
     
+    @Override
     public String[] getLocations() throws IOException{
         return solrSplit.getLocations();
     }
