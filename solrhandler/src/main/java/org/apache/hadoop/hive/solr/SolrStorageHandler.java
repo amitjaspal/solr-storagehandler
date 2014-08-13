@@ -45,30 +45,30 @@ import org.apache.hadoop.mapred.OutputFormat;
 
 
 public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredicateHandler{
-    
+
     private Configuration conf;
     static final Log LOG = LogFactory.getLog(SolrStorageHandler.class);
-    
+
     @Override
     public Configuration getConf(){
         return this.conf;
     }
-    
+
     @Override
     public void setConf(Configuration conf){
         this.conf = conf;
     }
-    
+
     @Override
     public Class<? extends InputFormat> getInputFormatClass(){
         return SolrInputFormat.class;
     }
-    
+
     @Override
     public Class<? extends OutputFormat> getOutputFormatClass(){
         return SolrOutputFormat.class;
     }
-    
+
     @Override
     public HiveMetaHook getMetaHook(){
         return new SolrMetaHook();
@@ -78,34 +78,34 @@ public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredic
     public Class<? extends SerDe> getSerDeClass(){
         return SolrSerDe.class;
     }
-    
+
     @Override
     public HiveAuthorizationProvider getAuthorizationProvider(){
         return null;
     }
-    
-    @Override 
+
+    @Override
     public void configureInputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
         Properties externalTableProperties = tableDesc.getProperties();
-        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties, tableDesc);
+        ExternalTableProperties.initialize(externalTableProperties, jobProperties, tableDesc);
     }
-    
+
     @Override
     public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
         Properties externalTableProperties = tableDesc.getProperties();
-        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties, tableDesc);
+        ExternalTableProperties.initialize(externalTableProperties, jobProperties, tableDesc);
     }
-    
+
     @Override
     public void configureJobConf(TableDesc tableDesc, JobConf jobConf){
         // do nothing;
     }
-    
+
     @Override
     public void configureTableJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
         // do nothing;
     }
-    
+
     @Override
     public DecomposedPredicate decomposePredicate(JobConf entries, Deserializer deserializer, ExprNodeDesc exprNodeDesc ){
         IndexPredicateAnalyzer analyzer = PredicateAnalyzer.getPredicateAnalyzer();
@@ -116,5 +116,5 @@ public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredic
         decomposedPredicate.residualPredicate = (ExprNodeGenericFuncDesc) residualPredicate;
         return decomposedPredicate;
     }
-    
+
 }

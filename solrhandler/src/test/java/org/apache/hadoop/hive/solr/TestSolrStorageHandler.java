@@ -11,21 +11,30 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
+/* import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRCluster; */
+import org.apache.log4j.Logger;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.embedded.JettySolrRunner;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.client.solrj.request.QueryRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.cloud.MiniSolrCloudCluster;
 import org.apache.solr.common.SolrInputDocument;
+import org.apache.solr.common.cloud.ClusterState;
+import org.apache.solr.common.cloud.Replica;
+import org.apache.solr.common.cloud.Slice;
 import org.apache.solr.common.cloud.SolrZkClient;
+import org.apache.solr.common.cloud.ZkStateReader;
 import org.apache.solr.common.params.CollectionParams.CollectionAction;
 import org.apache.solr.common.params.CoreAdminParams;
 import org.apache.solr.common.params.ModifiableSolrParams;
-import org.apache.solr.common.util.NamedList;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -33,6 +42,7 @@ import org.junit.Test;
 
 public class TestSolrStorageHandler extends Assert{
 
+  private static final Logger LOG = Logger.getLogger(TestSolrStorageHandler.class.getName());
   private static final String driverName = "org.apache.hive.jdbc.HiveDriver";
   private static final File HIVE_BASE_DIR = new File("target/hive");
   private static final File HIVE_SCRATCH_DIR = new File(HIVE_BASE_DIR + "/scratchdir");
@@ -47,38 +57,41 @@ public class TestSolrStorageHandler extends Assert{
   private static final int NUM_SHARDS = 1;
   private static final int REPLICATION_FACTOR = 1;
   private static final String[] SOLR_DATA = {"","Lord of the Rings","Borne Trilogy", "Serendipity", "August Rush",
-                                             "Jurasic Park", "Titanic"};
+    "Jurasic Park", "Titanic"};
   private static final String COLLECTION_NAME = "testSolrCloudCollection";
   private static final String CONFIG_NAME = "solrCloudCollectionConfig";
   private static final String CONFIGS_ZKNODE = "/configs";
   private static MiniSolrCloudCluster miniCluster;
   private static Connection con;
-//  private static CloudSolrServer cloudSolrServer = null;
-//  private static SolrZkClient zkClient = null;
-//  private static  String zkAddress = null;
+  /*private static  MiniDFSCluster m_dfs = null;
+  private static  MiniMRCluster m_mr = null;
+  private static FileSystem m_fileSys = null;
+  private static JobConf m_conf = null; */
+
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception{
     // Set up a MiniSolrCloudCluster
-    System.setProperty("tickTime", "5000");
     String testHome = SolrTestCaseJ4.TEST_HOME();
     miniCluster = new MiniSolrCloudCluster(1, null, new File(testHome, "solr-no-core.xml"),null, null);
     assertNotNull(miniCluster.getZkServer());
     miniCluster.getZkServer().setTheTickTime(5000);
-    System.out.println("ticktime = " + miniCluster.getZkServer().getTheTickTime());
- //   zkAddress = miniCluster.getZkServer().getZkAddress();
- //   cloudSolrServer = new CloudSolrServer(zkAddress, true);
- //   cloudSolrServer.connect();
- //   zkClient = new SolrZkClient(zkAddress,TIMEOUT, 45000, null);
+
+    assertNotNull(miniCluster.getZkServer());
+    List<JettySolrRunner> jettys = miniCluster.getJettySolrRunners();
+    assertEquals(1, jettys.size());
+    for (JettySolrRunner jetty : jettys) {
+      assertTrue(jetty.isRunning());
+    }
+
 
     // create collection
-    // System.setProperty("solr.tests.mergePolicy", "org.apache.lucene.index.TieredMergePolicy");
-    // uploadConfigToZk(SolrTestCaseJ4.TEST_HOME() + File.separator + "collection1" + File.separator + "conf", CONFIG_NAME);
-    // createCollection(cloudSolrServer, COLLECTION_NAME, NUM_SHARDS, REPLICATION_FACTOR, CONFIG_NAME);
-    // cloudSolrServer.setDefaultCollection(COLLECTION_NAME);
+    System.setProperty("solr.tests.mergePolicy", "org.apache.lucene.index.TieredMergePolicy");
+    uploadConfigToZk(SolrTestCaseJ4.TEST_HOME() + File.separator + "collection1" + File.separator + "conf", CONFIG_NAME);
+    createCollection(COLLECTION_NAME, NUM_SHARDS, REPLICATION_FACTOR, CONFIG_NAME);
 
-    // insert documents into the collection
-    // insertDocs();
+    //insert documents into the collection
+    insertDocs();
 
     // Set up the HIVE directory structure
     FileUtils.forceMkdir(HIVE_BASE_DIR);
@@ -99,31 +112,47 @@ public class TestSolrStorageHandler extends Assert{
     System.setProperty("test.log.dir", HIVE_LOGS_DIR.getAbsolutePath());
     System.setProperty("hive.querylog.location", HIVE_TMP_DIR.getAbsolutePath());
     System.setProperty("hadoop.tmp.dir", HIVE_HADOOP_TMP_DIR.getAbsolutePath());
+    System.setProperty("hive.aux.jars.path", "file:///home/amitjaspal/tmp/solrhandler-1.0-SNAPSHOT.jar,file:///home/amitjaspal/tmp/solr-solrj-4.4.0-cdh5.1.0.jar,file:///home/amitjaspal/tmp/httpmime-4.1.3.jar,"
+        + "file:///home/amitjaspal/tmp/hive-metastore.jar," + "file:///home/amitjaspal/tmp/noggit-0.5.jar");
     System.setProperty("derby.stream.error.file",HIVE_BASE_DIR.getAbsolutePath() + "/derby.log");
-/*
-    // load the HIVE-JDBC Driver
-    Class.forName(driverName);
 
-    // set up the connection to the HIVE Server
-    con = DriverManager.getConnection("jdbc:hive2://", "", "");
-    assertNotNull("Connection is null", con);
-    assertFalse("Connection should not be closed", con.isClosed()); */
+    /*
+    final int dataNodes = 1;     // There will be 4 data nodes
+    final int taskTrackers = 1;  // There will be 4 task tracker nodes
+    Configuration config = new Configuration();
+
+    // Builds and starts the mini dfs and mapreduce clusters
+    System.setProperty("hadoop.log.dir", ".");
+    m_dfs = new MiniDFSCluster(config, dataNodes, true, null);
+
+    m_fileSys = m_dfs.getFileSystem();
+    m_mr = new MiniMRCluster(taskTrackers, m_fileSys.getUri().toString(), 1);
+
+    // Create the configuration hadoop-site.xml file
+    File conf_dir = new File(System.getProperty("user.home"), "pigtest/conf/");
+    conf_dir.mkdirs();
+    File conf_file = new File(conf_dir, "hadoop-site.xml");
+
+    // Write the necessary config info to hadoop-site.xml
+    m_conf = m_mr.createJobConf();
+    m_conf.setInt("mapred.submit.replication", 1);
+    m_conf.set("dfs.datanode.address", "0.0.0.0:0");
+    m_conf.set("dfs.datanode.http.address", "0.0.0.0:0");
+    m_conf.writeXml(new FileOutputStream(conf_file));
+
+    // Set the system properties needed by Pig
+    System.setProperty("cluster", m_conf.get("mapred.job.tracker"));
+    System.setProperty("namenode", m_conf.get("fs.default.name"));
+    System.setProperty("junit.hadoop.conf", conf_dir.getPath());
+    System.setProperty("mapred.job.tracker", m_mr.createJobConf(new JobConf(m_conf)).get("mapred.job.tracker"));
+     */
   }
 
   @Test
   public void testSolrCollection() throws SolrServerException, MalformedURLException, Exception{
     String zkAddress = miniCluster.getZkServer().getZkAddress();
     CloudSolrServer cloudSolrServer = new CloudSolrServer(zkAddress, true);
-    cloudSolrServer.connect();
-    // create collection
-    System.setProperty("solr.tests.mergePolicy", "org.apache.lucene.index.TieredMergePolicy");
-    uploadConfigToZk(SolrTestCaseJ4.TEST_HOME() + File.separator + "collection1" + File.separator + "conf", CONFIG_NAME);
-    createCollection(cloudSolrServer, COLLECTION_NAME, NUM_SHARDS, REPLICATION_FACTOR, CONFIG_NAME);
     cloudSolrServer.setDefaultCollection(COLLECTION_NAME);
-
-    //insert documents into the collection
-    insertDocs();
-
     SolrQuery qry = new SolrQuery();
     qry.setQuery("*:*");
     QueryResponse rsp = cloudSolrServer.query(qry);
@@ -152,7 +181,7 @@ public class TestSolrStorageHandler extends Assert{
   }
 
   @Test
-  public void testSelectSolrTable() throws SQLException, ClassNotFoundException{
+  public void testSelectSolrTable() throws Exception{
     String zkAddress = miniCluster.getZkServer().getZkAddress();
     // load the HIVE-JDBC Driver
     Class.forName(driverName);
@@ -168,17 +197,36 @@ public class TestSolrStorageHandler extends Assert{
         + " 'solr.collection.name' = 'testSolrCloudCollection')";
     s.executeUpdate(query);
     ResultSet r = s.executeQuery("select * from testTable");
+    int i = 1;
     while(r.next()){
-      //System.out.println("testing !!" + r.getString(2));
       ResultSetMetaData metaData = r.getMetaData();
       int count = metaData.getColumnCount(); //number of column
-      System.out.println("column count !!" + count);
-      for (int i = 1; i <= count; i++)
+
+      for (int k = 1; k <= count; k++)
       {
-        System.out.println("column label -> " + metaData.getColumnLabel(i));
-        System.out.println("column value = " + r.getString(metaData.getColumnLabel(i)));
+        if(k == 1)
+          assertEquals(i, Integer.parseInt(r.getString(metaData.getColumnLabel(k))));
+        else
+          assertEquals(SOLR_DATA[i], r.getString(metaData.getColumnLabel(k)));
       }
+      i++;
     }
+    /*
+    r = s.executeQuery("select * from testTable where id > 3");
+    i = 4;
+    while(r.next()){
+      ResultSetMetaData metaData = r.getMetaData();
+      int count = metaData.getColumnCount(); //number of column
+
+      for (int k = 1; k <= count; k++)
+      {
+        if(k == 1)
+          assertEquals(i, Integer.parseInt(r.getString(metaData.getColumnLabel(k))));
+        else
+          assertEquals(SOLR_DATA[i], r.getString(metaData.getColumnLabel(k)));
+      }
+      i++;
+    }*/
     r.close();
     s.close();
     con.close();
@@ -217,7 +265,7 @@ public class TestSolrStorageHandler extends Assert{
       uploadConfigFileToZk(zkClient, configName, "solrconfig.xml", new File(configDir, "solrconfig-tlog.xml"));
       uploadConfigFileToZk(zkClient, configName, "schema.xml", new File(configDir, "schema.xml"));
       uploadConfigFileToZk(zkClient, configName, "solrconfig.snippet.randomindexconfig.xml",
-                           new File(configDir, "solrconfig.snippet.randomindexconfig.xml"));
+          new File(configDir, "solrconfig.snippet.randomindexconfig.xml"));
       uploadConfigFileToZk(zkClient, configName, "old_synonyms.txt", new File(configDir, "old_synonyms.txt"));
       uploadConfigFileToZk(zkClient, configName, "protwords.txt", new File(configDir, "protwords.txt"));
       uploadConfigFileToZk(zkClient, configName, "stopwords.txt", new File(configDir, "stopwords.txt"));
@@ -235,25 +283,40 @@ public class TestSolrStorageHandler extends Assert{
     zkClient.makePath(CONFIGS_ZKNODE + "/" + configName + "/" + nameInZk, file, false, true);
   }
 
-  private static NamedList<Object> createCollection(CloudSolrServer server, String name, int numShards,
-    int replicationFactor, String configName) throws Exception {
-    ModifiableSolrParams modParams = new ModifiableSolrParams();
-    modParams.set(CoreAdminParams.ACTION, CollectionAction.CREATE.name());
-    modParams.set("name", name);
-    modParams.set("numShards", numShards);
-    modParams.set("replicationFactor", replicationFactor);
-    modParams.set("collection.configName", configName);
-    QueryRequest request = new QueryRequest(modParams);
-    request.setPath("/admin/collections");
-    return server.request(request);
+  private static void createCollection(String name, int numShards,
+      int replicationFactor, String configName) throws Exception {
+    CloudSolrServer cloudSolrServer = null;
+    SolrZkClient zkClient = null;
+    QueryRequest request= null;
+    try{
+      cloudSolrServer = new CloudSolrServer(miniCluster.getZkServer().getZkAddress(), true);
+      cloudSolrServer.setDefaultCollection(COLLECTION_NAME);
+      zkClient = new SolrZkClient(miniCluster.getZkServer().getZkAddress(),
+          TIMEOUT, 45000, null);
+      ModifiableSolrParams modParams = new ModifiableSolrParams();
+      modParams.set(CoreAdminParams.ACTION, CollectionAction.CREATE.name());
+      modParams.set("name", name);
+      modParams.set("numShards", numShards);
+      modParams.set("replicationFactor", replicationFactor);
+      modParams.set("collection.configName", configName);
+      request = new QueryRequest(modParams);
+      request.setPath("/admin/collections");
+      cloudSolrServer.request(request);
+      ZkStateReader zkStateReader = new ZkStateReader(zkClient);
+      waitForRecoveriesToFinish(COLLECTION_NAME, zkStateReader, true, true, 330);
+    }finally{
+      if(cloudSolrServer != null){
+        cloudSolrServer.shutdown();
+      }
+    }
   }
 
   private static void insertDocs() throws SolrServerException, IOException{
-    List<SolrInputDocument> input = new ArrayList<SolrInputDocument>();
-
     CloudSolrServer cloudSolrServer = null;
     try{
+      List<SolrInputDocument> input = new ArrayList<SolrInputDocument>();
       cloudSolrServer = new CloudSolrServer(miniCluster.getZkServer().getZkAddress(), true);
+      cloudSolrServer.setDefaultCollection(COLLECTION_NAME);
       cloudSolrServer.connect();
       cloudSolrServer.setDefaultCollection(COLLECTION_NAME);
       populateInputDocList(1, SOLR_DATA[1], input);
@@ -276,6 +339,57 @@ public class TestSolrStorageHandler extends Assert{
     doc.setField("id", id);
     doc.setField("name", name);
     input.add(doc);
+  }
+
+  protected static void waitForRecoveriesToFinish(String collection,
+      ZkStateReader zkStateReader, boolean verbose, boolean failOnTimeout, int timeoutSeconds)
+          throws Exception {
+    LOG.info("Wait for recoveries to finish - collection: " + collection + " failOnTimeout:" + failOnTimeout + " timeout (sec):" + timeoutSeconds);
+    boolean cont = true;
+    int cnt = 0;
+
+    while (cont) {
+      if (verbose) System.out.println("-");
+      boolean sawLiveRecovering = false;
+      zkStateReader.updateClusterState(true);
+      ClusterState clusterState = zkStateReader.getClusterState();
+      Map<String,Slice> slices = clusterState.getSlicesMap(collection);
+      assertNotNull("Could not find collection:" + collection, slices);
+      for (Map.Entry<String,Slice> entry : slices.entrySet()) {
+        Map<String,Replica> shards = entry.getValue().getReplicasMap();
+        for (Map.Entry<String,Replica> shard : shards.entrySet()) {
+          if (verbose) System.out.println("rstate:"
+              + shard.getValue().getStr(ZkStateReader.STATE_PROP)
+              + " live:"
+              + clusterState.liveNodesContain(shard.getValue().getNodeName()));
+          String state = shard.getValue().getStr(ZkStateReader.STATE_PROP);
+          if ((state.equals(ZkStateReader.RECOVERING) || state
+              .equals(ZkStateReader.SYNC) || state.equals(ZkStateReader.DOWN))
+              && clusterState.liveNodesContain(shard.getValue().getStr(
+                  ZkStateReader.NODE_NAME_PROP))) {
+            sawLiveRecovering = true;
+          }
+        }
+      }
+      if (!sawLiveRecovering || cnt == timeoutSeconds) {
+        if (!sawLiveRecovering) {
+          if (verbose) System.out.println("no one is recoverying");
+        } else {
+          if (verbose) System.out.println("Gave up waiting for recovery to finish..");
+          if (failOnTimeout) {
+            fail("There are still nodes recoverying - waited for " + timeoutSeconds + " seconds");
+            // won't get here
+            return;
+          }
+        }
+        cont = false;
+      } else {
+        Thread.sleep(1000);
+      }
+      cnt++;
+    }
+
+    LOG.info("Recoveries finished - collection: " + collection);
   }
 
 }

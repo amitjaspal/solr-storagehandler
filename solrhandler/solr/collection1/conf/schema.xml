@@ -388,7 +388,6 @@
 
   <fieldType name="latLon" class="solr.LatLonType" subFieldType="double"/>
 
-
   <!-- omitPositions example -->
   <fieldType name="nopositions" class="solr.TextField" omitPositions="true">
     <analyzer>
@@ -430,7 +429,7 @@
    <field name="id" type="int" indexed="true" stored="true" multiValued="false" required="false"/>
    <field name="signatureField" type="string" indexed="true" stored="false"/>
    <field name="uuid" type="uuid" stored="true" />
-   <field name="name" type="string" indexed="true" stored="true"/>
+   <field name="name" type="nametext" indexed="true" stored="true" multiValued = "false"/>
    <field name="text" type="text" indexed="true" stored="false"/>
    <field name="subject" type="text" indexed="true" stored="true"/>
    <field name="title" type="nametext" indexed="true" stored="true"/>
@@ -689,4 +688,5 @@
    <copyField source="*_dynamic" dest="dynamic_*"/>
    <copyField source="*_path" dest="*_ancestor"/>
 
+ <!-- example of a custom similarity -->
 </schema>

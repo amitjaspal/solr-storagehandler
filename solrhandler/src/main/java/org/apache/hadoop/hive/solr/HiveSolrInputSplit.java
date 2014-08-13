@@ -21,65 +21,73 @@ package org.apache.hadoop.hive.solr;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
+import org.apache.log4j.Logger;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
 
 /*
- * HiveSolrInputSplit is just a wrapper class on top of SolrInputSplit. It seems 
+ * HiveSolrInputSplit is just a wrapper class on top of SolrInputSplit. It seems
  * Hive considers all data sources to be of FileInputFormat so we need to define
  * the wrapper class HiveSolrInputSplit which extends from FileInputSplit.
- * Under the hood all functionalities are delegated to SolrInputSplit 
- * only.
+ * Under the hood all functionalities are delegated to SolrInputSplit only.
  */
 
 class HiveSolrInputSplit extends FileSplit {
-    
-    private SolrInputSplit solrSplit;
-    private Path path;
-    
-    public HiveSolrInputSplit(){
-       this(new SolrInputSplit(), new Path(" "));
-    }
-    
-    HiveSolrInputSplit(SolrInputSplit solrSplit, Path path){
-        super(path, 0, 0, (String[]) null);
-        this.solrSplit = solrSplit;
-        this.path = path;
-    }
-    
-    @Override
-    public long getLength() {
-        return 1l;
-    }
-    
-    @Override
-    public String[] getLocations() throws IOException{
-        return solrSplit.getLocations();
-    }
-    
-    public void write(DataOutput out) throws IOException{
-        Text.writeString(out, path.toString());
-        solrSplit.write(out);
-    }
-    
-    public void readFields(DataInput in) throws IOException {
-        path = new Path(Text.readString(in));
-        solrSplit.readFields(in);
-    }
 
-    @Override
-    public String toString() {
-        return solrSplit.toString();
-    }
+  private static final Logger LOG = Logger.getLogger(ExternalTableProperties.class.getName());
+  private final SolrInputSplit solrSplit;
+  private Path path;
 
-    @Override
-    public Path getPath() {
-        return path;
+  public HiveSolrInputSplit(){
+    this(new SolrInputSplit(), new Path(" "));
+  }
+
+  HiveSolrInputSplit(SolrInputSplit solrSplit, Path path){
+    super(path, 0, 0, (String[]) null);
+    this.solrSplit = solrSplit;
+    this.path = path;
+  }
+
+  @Override
+  public long getLength(){
+    long length = 0;
+    try{
+      length = solrSplit.getLength();
+    }catch(IOException ex){
+
     }
-    
-    public SolrInputSplit getSolrSplit(){
-        return this.solrSplit;
-    }
+    return length;
+  }
+
+  @Override
+  public String[] getLocations() throws IOException{
+    return solrSplit.getLocations();
+  }
+
+  @Override
+  public void write(DataOutput out) throws IOException{
+    Text.writeString(out, path.toString());
+    solrSplit.write(out);
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    path = new Path(Text.readString(in));
+    solrSplit.readFields(in);
+  }
+
+  @Override
+  public String toString() {
+    return solrSplit.toString();
+  }
+
+  @Override
+  public Path getPath() {
+    return path;
+  }
+
+  public SolrInputSplit getSolrSplit(){
+    return this.solrSplit;
+  }
 }

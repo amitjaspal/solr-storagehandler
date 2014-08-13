@@ -58,6 +58,8 @@ public class SolrInputFormat implements InputFormat<LongWritable, MapWritable>{
         stateReader = cloudServer.getZkStateReader();
         ClusterState cs = stateReader.getClusterState();
         slices = cs.getSlices(job.get(ExternalTableProperties.COLLECTION_NAME));
+        System.out.println("collection name = "   );
+        System.out.println("slices = " + slices);
         InputSplit []inputSplits = new HiveSolrInputSplit[slices.size()];
         int i = 0;
         for(Slice slice : slices){

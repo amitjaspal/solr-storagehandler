@@ -5,8 +5,14 @@
   <artifactId>solrhandler</artifactId>
   <packaging>jar</packaging>
   <version>1.0-SNAPSHOT</version>
-  <name>solrhandler</name>
+  <name>Solr StorageHandler for Hive</name>
   <url>http://maven.apache.org</url>
+  
+<properties>
+    <hive.version>0.13.1-cdh5.2.0-SNAPSHOT</hive.version> 
+    <solr.version>4.4.0-cdh5.1.0</solr.version>
+    <hadoop.version>2.3.0-mr1-cdh5.2.0-SNAPSHOT</hadoop.version>
+</properties>
   
   <dependencies>
     
@@ -18,103 +24,102 @@
     </dependency>
     
     <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.17</version>
+    </dependency>
+
+    <dependency>
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-exec</artifactId>
         <exclusions>
             <exclusion> 
-            <groupId>commons-httpclient</groupId>
-            <artifactId>commons-httpclient</artifactId>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
             </exclusion>
-              </exclusions> 
-        <version>0.13.1</version>
+        </exclusions>
+        <version>${hive.version}</version>
     </dependency>
     
-<dependency>
-    <groupId>org.apache.httpcomponents</groupId>
-    <artifactId>httpclient</artifactId>
-    <version>4.3.4</version>
-</dependency>
     
-    <dependency>
+  <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.3.4</version>
+  </dependency>
+   
+    
+     <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-core</artifactId>
         <exclusions>
             <exclusion> 
-            <groupId>org.mortbay.jetty</groupId>
-            <artifactId>servlet-api-2.5</artifactId>
-            </exclusion>
-               <exclusion> 
-            <groupId>org.mortbay.jetty</groupId>
+            <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
             </exclusion>
         </exclusions> 
-        <version>1.2.1</version>
+        <version>${hadoop.version}</version>
     </dependency>
+    
     
     <dependency>
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-metastore</artifactId>
-        <version>0.13.1</version>
+        <version>${hive.version}</version>
     </dependency>
 
     
     <dependency>
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-serde</artifactId>
-        <version>0.13.1</version>
+        <version>${hive.version}</version>
     </dependency>
     
     <dependency>
         <groupId>org.apache.solr</groupId>
         <artifactId>solr-solrj</artifactId>
-        <version>4.9.0</version>
-         
+        <version>${solr.version}</version>
     </dependency>
     
     <dependency>
     <groupId>org.apache.hive</groupId>
     <artifactId>hive-jdbc</artifactId>
-    <version>0.13.1</version>
+    <version>${hive.version}</version>
         <exclusions>
             <exclusion> 
             <groupId>javax.servlet</groupId>
             <artifactId>servlet-api</artifactId>
             </exclusion>
         </exclusions>   
-    
     </dependency>
     
     <dependency>
     <groupId>org.apache.solr</groupId>
     <artifactId>solr-test-framework</artifactId>
-    
-    <version>4.9.0</version>
-        <exclusions>
-           <exclusion> 
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-servlet</artifactId>
-            </exclusion>
-          <exclusion> 
-            <groupId>org.restlet.jee</groupId>
-            <artifactId>org.restlet.ext.servlet</artifactId>
-            </exclusion>
-        </exclusions>   
+    <version>${solr.version}</version>
     </dependency>
-    
-   
-
-       
   </dependencies>
   
-  <repositories>
-    <repository>
-        <id>repository.cloudera.com</id>
-        <name>repository.cloudera.com-releases</name>
-        <url>https://repository.cloudera.com/artifactory/datanucleus</url>
-    </repository>
- </repositories>
+
   
-  <build>
+    <repositories>
+    <repository>
+      <id>cloudera</id>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+    </repository>
+  </repositories>
+ 
+ <build>
+  
+   <testResources>
+      <testResource>
+        <directory>src/test/config</directory>
+        <includes>
+          <include>log4j.properties</include>
+        </includes>
+      </testResource>
+    </testResources>
+    
       <plugins>
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
@@ -125,31 +130,39 @@
                 <target>1.7</target>
             </configuration>
         </plugin>
+        
+        <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <version>2.3</version>
+            <configuration>
+                <descriptor>src/main/assembly/src.xml</descriptor>
+            </configuration>
+            <executions>
+                <execution>
+                    <id>make-assembly</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>single</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+	
+	<plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <addClasspath>true</addClasspath>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
+        
       </plugins>
     </build>
+
   
-  <profiles>
-    <profile>
-      <id>qa</id>
-      <build>
-        <plugins>
-          <plugin>
-            <artifactId>maven-dependency-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>install</phase>
-                <goals>
-                  <goal>copy-dependencies</goal>
-                </goals>
-                <configuration>
-                  <outputDirectory>/home/amitjaspal/projects/solrhandler/target/lib</outputDirectory>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
-   
+
 </project>
