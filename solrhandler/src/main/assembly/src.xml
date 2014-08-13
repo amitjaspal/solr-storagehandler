@@ -1,0 +1,25 @@
+<assembly>
+  <id>solr-storagehandler</id>
+  <formats>
+    <format>tar</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <dependencySets>
+    <dependencySet>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+        <includes>
+        	<include>org.noggit:noggit</include>
+        	<include>org.apache.httpcomponents:httpmime</include>
+        	<include>org.apache.solr:solr-solrj</include>
+      </includes>
+    </dependencySet>
+  </dependencySets>
+  <fileSets>
+    <fileSet>
+      <directory>target</directory>
+      <outputDirectory>/</outputDirectory>
+      <includes> <include> *.jar </include> </includes>
+    </fileSet>
+  </fileSets>
+</assembly>
