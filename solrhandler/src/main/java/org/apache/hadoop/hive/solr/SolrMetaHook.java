@@ -24,31 +24,39 @@ import org.apache.hadoop.hive.metastore.api.Table;
 
 /*
  * SolrMetaHook module is responsible for making sure that SOLR backed
- * data store is in sync with the Hive meta-store.
+ * data store is in sync with the Hive meta-store. For version 1.0 we
+ * don't plan to create or delete SOLR collections, but this api can
+ * be useful going forward.
  */
 public class SolrMetaHook implements HiveMetaHook{
-    
-    public void preCreateTable(Table table) throws MetaException {
-   
-    }
 
-    public void rollbackCreateTable(Table table) throws MetaException {
-        
-    }
+  @Override
+  public void preCreateTable(Table table) throws MetaException {
 
-    public void commitCreateTable(Table table) throws MetaException {
-        
-    }
+  }
 
-    public void preDropTable(Table table) throws MetaException {
+  @Override
+  public void rollbackCreateTable(Table table) throws MetaException {
 
-    }   
-    
-    public void rollbackDropTable(Table table) throws MetaException {
-        
-    }
+  }
 
-    public void commitDropTable(Table table, boolean deleteData) throws MetaException {
-        
-    }
+  @Override
+  public void commitCreateTable(Table table) throws MetaException {
+
+  }
+
+  @Override
+  public void preDropTable(Table table) throws MetaException {
+
+  }
+
+  @Override
+  public void rollbackDropTable(Table table) throws MetaException {
+
+  }
+
+  @Override
+  public void commitDropTable(Table table, boolean deleteData) throws MetaException {
+
+  }
 }

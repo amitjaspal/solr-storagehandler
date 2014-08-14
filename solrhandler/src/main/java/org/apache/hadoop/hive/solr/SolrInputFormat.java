@@ -30,6 +30,8 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.common.cloud.ClusterState;
@@ -39,52 +41,54 @@ import org.apache.solr.common.cloud.ZkStateReader;
 
 public class SolrInputFormat implements InputFormat<LongWritable, MapWritable>{
 
-    @Override
-    public InputSplit[] getSplits(JobConf job, int numSplits){
+  private static final Logger LOG = Logger.getLogger(SolrBatchWriter.class.getName());
 
-        CloudSolrServer cloudServer = null;
-        ZkStateReader stateReader;
-        Collection<Slice> slices;
-        Path []result = FileInputFormat.getInputPaths(job);
-        Path path = result[0];
-        String zooKeeperAddress = job.get(ExternalTableProperties.ZOOKEEPER_SERVICE_URL);
-        try{
-            cloudServer = new CloudSolrServer(zooKeeperAddress);
-        }catch(Exception ex){
-            ex.printStackTrace();
-        }
-        cloudServer.setDefaultCollection(job.get(ExternalTableProperties.COLLECTION_NAME));
-        cloudServer.connect();
-        stateReader = cloudServer.getZkStateReader();
-        ClusterState cs = stateReader.getClusterState();
-        slices = cs.getSlices(job.get(ExternalTableProperties.COLLECTION_NAME));
-        System.out.println("collection name = "   );
-        System.out.println("slices = " + slices);
-        InputSplit []inputSplits = new HiveSolrInputSplit[slices.size()];
-        int i = 0;
-        for(Slice slice : slices){
+  /*
+   * This method queries SOLR Cloud for the number of shards the collection has,
+   * one split per shard is created.
+   */
+  @Override
+  public InputSplit[] getSplits(JobConf job, int numSplits){
 
-            Replica leader = slice.getLeader();
-            SolrInputSplit split = new SolrInputSplit(leader.getProperties().get("base_url").toString(), leader.getProperties().get("core").toString()
-                                          , job.get(ExternalTableProperties.COLLECTION_NAME));
-            inputSplits[i] = new HiveSolrInputSplit(split, path);
-            i++;
-        }
-
-        stateReader.close();
-        return inputSplits;
+    CloudSolrServer cloudServer = null;
+    ZkStateReader stateReader;
+    Collection<Slice> slices;
+    Path []result = FileInputFormat.getInputPaths(job);
+    Path path = result[0];
+    String zooKeeperAddress = job.get(ExternalTableProperties.ZOOKEEPER_SERVICE_URL);
+    try{
+      cloudServer = new CloudSolrServer(zooKeeperAddress);
+    }catch(MalformedURLException ex){
+      LOG.log(Level.ERROR, "Exception occured while adding documents to SOLR", ex);
     }
-
-    @Override
-    public RecordReader<LongWritable, MapWritable> getRecordReader(InputSplit split, JobConf job, Reporter reporter){
-
-        HiveSolrInputSplit hiveSolrSplit = (HiveSolrInputSplit)split;
-        SolrInputSplit solrInputSplit = hiveSolrSplit.getSolrSplit();
-        SolrQuery solrQuery = QueryBuilder.buildQuery(job);
-        SolrDAO solrDAO = new SolrDAO(solrInputSplit.getNodeURL(), solrInputSplit.getShardName(),
-                                      solrInputSplit.getCollectionName(), solrQuery);
-
-        solrDAO.setQuery(solrQuery);
-        return new SolrRecordReader(split, solrDAO);
+    cloudServer.setDefaultCollection(job.get(ExternalTableProperties.COLLECTION_NAME));
+    cloudServer.connect();
+    stateReader = cloudServer.getZkStateReader();
+    ClusterState cs = stateReader.getClusterState();
+    slices = cs.getSlices(job.get(ExternalTableProperties.COLLECTION_NAME));
+    InputSplit []inputSplits = new HiveSolrInputSplit[slices.size()];
+    int i = 0;
+    for(Slice slice : slices){
+      Replica leader = slice.getLeader();
+      SolrInputSplit split = new SolrInputSplit(leader.getProperties().get("base_url").toString(), leader.getProperties().get("core").toString()
+          , job.get(ExternalTableProperties.COLLECTION_NAME));
+      inputSplits[i] = new HiveSolrInputSplit(split, path);
+      i++;
     }
+    LOG.debug("solr splits size = "+ inputSplits.length);
+    stateReader.close();
+    return inputSplits;
+  }
+
+  @Override
+  public RecordReader<LongWritable, MapWritable> getRecordReader(InputSplit split, JobConf job, Reporter reporter){
+
+    HiveSolrInputSplit hiveSolrSplit = (HiveSolrInputSplit)split;
+    SolrInputSplit solrInputSplit = hiveSolrSplit.getSolrSplit();
+    SolrQuery solrQuery = SolrQueryGenerator.generateQuery(job);
+    SolrDAO solrDAO = new SolrDAO(solrInputSplit.getNodeURL(), solrInputSplit.getShardName(),
+        solrInputSplit.getCollectionName(), solrQuery);
+    solrDAO.setQuery(solrQuery);
+    return new SolrRecordReader(split, solrDAO);
+  }
 }

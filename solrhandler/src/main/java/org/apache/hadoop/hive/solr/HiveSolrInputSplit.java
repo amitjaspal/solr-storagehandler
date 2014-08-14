@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
@@ -40,6 +41,9 @@ class HiveSolrInputSplit extends FileSplit {
   private Path path;
 
   public HiveSolrInputSplit(){
+    // TODO: Passing single spaced path " " is not the best way.
+    // need to figure out better ways of handling this.
+    // path is properly initialized when readFields is called
     this(new SolrInputSplit(), new Path(" "));
   }
 
@@ -55,7 +59,7 @@ class HiveSolrInputSplit extends FileSplit {
     try{
       length = solrSplit.getLength();
     }catch(IOException ex){
-
+      LOG.log(Level.ERROR, "Exception occured while computing length of the split", ex);
     }
     return length;
   }

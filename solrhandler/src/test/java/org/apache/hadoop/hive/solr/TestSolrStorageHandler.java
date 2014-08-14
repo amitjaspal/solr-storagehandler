@@ -12,16 +12,11 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.io.FileUtils;
-/* import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster; */
 import org.apache.log4j.Logger;
 import org.apache.solr.SolrTestCaseJ4;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.embedded.JettySolrRunner;
 import org.apache.solr.client.solrj.impl.CloudSolrServer;
 import org.apache.solr.client.solrj.request.QueryRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
@@ -57,17 +52,12 @@ public class TestSolrStorageHandler extends Assert{
   private static final int NUM_SHARDS = 1;
   private static final int REPLICATION_FACTOR = 1;
   private static final String[] SOLR_DATA = {"","Lord of the Rings","Borne Trilogy", "Serendipity", "August Rush",
-    "Jurasic Park", "Titanic"};
+                                              "Jurasic Park", "Titanic"};
   private static final String COLLECTION_NAME = "testSolrCloudCollection";
   private static final String CONFIG_NAME = "solrCloudCollectionConfig";
   private static final String CONFIGS_ZKNODE = "/configs";
   private static MiniSolrCloudCluster miniCluster;
   private static Connection con;
-  /*private static  MiniDFSCluster m_dfs = null;
-  private static  MiniMRCluster m_mr = null;
-  private static FileSystem m_fileSys = null;
-  private static JobConf m_conf = null; */
-
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception{
@@ -76,14 +66,7 @@ public class TestSolrStorageHandler extends Assert{
     miniCluster = new MiniSolrCloudCluster(1, null, new File(testHome, "solr-no-core.xml"),null, null);
     assertNotNull(miniCluster.getZkServer());
     miniCluster.getZkServer().setTheTickTime(5000);
-
     assertNotNull(miniCluster.getZkServer());
-    List<JettySolrRunner> jettys = miniCluster.getJettySolrRunners();
-    assertEquals(1, jettys.size());
-    for (JettySolrRunner jetty : jettys) {
-      assertTrue(jetty.isRunning());
-    }
-
 
     // create collection
     System.setProperty("solr.tests.mergePolicy", "org.apache.lucene.index.TieredMergePolicy");
@@ -112,40 +95,7 @@ public class TestSolrStorageHandler extends Assert{
     System.setProperty("test.log.dir", HIVE_LOGS_DIR.getAbsolutePath());
     System.setProperty("hive.querylog.location", HIVE_TMP_DIR.getAbsolutePath());
     System.setProperty("hadoop.tmp.dir", HIVE_HADOOP_TMP_DIR.getAbsolutePath());
-    System.setProperty("hive.aux.jars.path", "file:///home/amitjaspal/tmp/solrhandler-1.0-SNAPSHOT.jar,file:///home/amitjaspal/tmp/solr-solrj-4.4.0-cdh5.1.0.jar,file:///home/amitjaspal/tmp/httpmime-4.1.3.jar,"
-        + "file:///home/amitjaspal/tmp/hive-metastore.jar," + "file:///home/amitjaspal/tmp/noggit-0.5.jar");
     System.setProperty("derby.stream.error.file",HIVE_BASE_DIR.getAbsolutePath() + "/derby.log");
-
-    /*
-    final int dataNodes = 1;     // There will be 4 data nodes
-    final int taskTrackers = 1;  // There will be 4 task tracker nodes
-    Configuration config = new Configuration();
-
-    // Builds and starts the mini dfs and mapreduce clusters
-    System.setProperty("hadoop.log.dir", ".");
-    m_dfs = new MiniDFSCluster(config, dataNodes, true, null);
-
-    m_fileSys = m_dfs.getFileSystem();
-    m_mr = new MiniMRCluster(taskTrackers, m_fileSys.getUri().toString(), 1);
-
-    // Create the configuration hadoop-site.xml file
-    File conf_dir = new File(System.getProperty("user.home"), "pigtest/conf/");
-    conf_dir.mkdirs();
-    File conf_file = new File(conf_dir, "hadoop-site.xml");
-
-    // Write the necessary config info to hadoop-site.xml
-    m_conf = m_mr.createJobConf();
-    m_conf.setInt("mapred.submit.replication", 1);
-    m_conf.set("dfs.datanode.address", "0.0.0.0:0");
-    m_conf.set("dfs.datanode.http.address", "0.0.0.0:0");
-    m_conf.writeXml(new FileOutputStream(conf_file));
-
-    // Set the system properties needed by Pig
-    System.setProperty("cluster", m_conf.get("mapred.job.tracker"));
-    System.setProperty("namenode", m_conf.get("fs.default.name"));
-    System.setProperty("junit.hadoop.conf", conf_dir.getPath());
-    System.setProperty("mapred.job.tracker", m_mr.createJobConf(new JobConf(m_conf)).get("mapred.job.tracker"));
-     */
   }
 
   @Test
@@ -156,8 +106,7 @@ public class TestSolrStorageHandler extends Assert{
     SolrQuery qry = new SolrQuery();
     qry.setQuery("*:*");
     QueryResponse rsp = cloudSolrServer.query(qry);
-    System.out.println("size = " + rsp.getResults().getNumFound());
-    assertEquals(6, rsp.getResults().getNumFound());
+    assertEquals(SOLR_DATA.length-1, rsp.getResults().getNumFound());
   }
 
   @Test
@@ -173,8 +122,8 @@ public class TestSolrStorageHandler extends Assert{
     Statement s = con.createStatement();
     s.executeUpdate("drop table testTable");
     String query = "create external table testTable( id int) "
-        + " stored by 'org.apache.hadoop.hive.solr.SolrStorageHandler' tblproperties('solr.zookeeper.service.url' = '" + zkAddress + "',"
-        + " 'solr.collection.name' = 'testSolrCloudCollection')";
+                 + " stored by 'org.apache.hadoop.hive.solr.SolrStorageHandler' tblproperties('solr.zookeeper.service.url' = '" + zkAddress + "',"
+                 + " 'solr.collection.name' = 'testSolrCloudCollection')";
     s.executeUpdate(query);
     s.close();
     con.close();
@@ -193,8 +142,8 @@ public class TestSolrStorageHandler extends Assert{
     Statement s = con.createStatement();
     s.executeUpdate("drop table testTable");
     String query = "create external table testTable( id int, name string) "
-        + " stored by 'org.apache.hadoop.hive.solr.SolrStorageHandler' tblproperties('solr.zookeeper.service.url' = '" + zkAddress + "',"
-        + " 'solr.collection.name' = 'testSolrCloudCollection')";
+                 + " stored by 'org.apache.hadoop.hive.solr.SolrStorageHandler' tblproperties('solr.zookeeper.service.url' = '" + zkAddress + "',"
+                 + " 'solr.collection.name' = 'testSolrCloudCollection')";
     s.executeUpdate(query);
     ResultSet r = s.executeQuery("select * from testTable");
     int i = 1;
@@ -211,31 +160,13 @@ public class TestSolrStorageHandler extends Assert{
       }
       i++;
     }
-    /*
-    r = s.executeQuery("select * from testTable where id > 3");
-    i = 4;
-    while(r.next()){
-      ResultSetMetaData metaData = r.getMetaData();
-      int count = metaData.getColumnCount(); //number of column
-
-      for (int k = 1; k <= count; k++)
-      {
-        if(k == 1)
-          assertEquals(i, Integer.parseInt(r.getString(metaData.getColumnLabel(k))));
-        else
-          assertEquals(SOLR_DATA[i], r.getString(metaData.getColumnLabel(k)));
-      }
-      i++;
-    }*/
     r.close();
     s.close();
     con.close();
-    System.out.println("Closing after test");
   }
 
   @AfterClass
   public static void tearDown() throws Exception {
-    System.out.println("In tear down");
     if (miniCluster != null) {
       miniCluster.shutdown();
     }
@@ -248,7 +179,6 @@ public class TestSolrStorageHandler extends Assert{
     System.clearProperty("solr.directoryFactory");
     System.clearProperty("solr.solrxml.location");
     System.clearProperty("zkHost");
-    System.out.println("Exiting");
   }
 
   protected static void uploadConfigToZk(String configDir, String configName) throws Exception {
@@ -391,5 +321,4 @@ public class TestSolrStorageHandler extends Assert{
 
     LOG.info("Recoveries finished - collection: " + collection);
   }
-
 }
