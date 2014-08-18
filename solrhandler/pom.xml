@@ -10,7 +10,7 @@
   
   <properties>
     <hive.version>0.13.1-cdh5.2.0-SNAPSHOT</hive.version>
-    <solr.version>4.4.0-cdh5.1.0</solr.version>
+    <solr.version>4.4.0-cdh5.2.0-SNAPSHOT</solr.version>
     <hadoop.version>2.3.0-mr1-cdh5.2.0-SNAPSHOT</hadoop.version>
   </properties>
   

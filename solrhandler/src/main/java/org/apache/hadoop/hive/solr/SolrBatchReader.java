@@ -44,9 +44,10 @@ class SolrBatchReader implements Runnable{
   private final SolrDocumentList buffer;
   private final HttpSolrServer solrServer;
   private final CyclicBarrier cb;
+  private final StringBuffer nextCursorMark;
 
   SolrBatchReader(Integer start, Integer window, Long size, SolrQuery query,
-      HttpSolrServer solrServer, SolrDocumentList buffer, CyclicBarrier cb) {
+      HttpSolrServer solrServer, SolrDocumentList buffer, CyclicBarrier cb, StringBuffer nextCursorMark) {
     this.start = start;
     this.window = window;
     this.size = size;
@@ -54,6 +55,7 @@ class SolrBatchReader implements Runnable{
     this.solrServer = solrServer;
     this.buffer = buffer;
     this.cb = cb;
+    this.nextCursorMark = nextCursorMark;
   }
 
   @Override
@@ -63,11 +65,14 @@ class SolrBatchReader implements Runnable{
     buffer.clear();
     // Read data from the SOLR server.
     try{
-      query.setStart(start);
       query.setRows(window);
+      query.set("sort", "score desc,id asc");
+      query.set("cursorMark",nextCursorMark.toString());
       response = solrServer.query(query);
-    }catch( SolrServerException e){
-      e.printStackTrace();
+      nextCursorMark.delete(0, nextCursorMark.length());
+      nextCursorMark.append(response.getNextCursorMark());
+    }catch( SolrServerException ex){
+      LOG.log(Level.ERROR, "Exception occured while querying the solr server", ex);
     }
     buffer.addAll(response.getResults());
     // Signal the parent thread that I am done.

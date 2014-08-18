@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -57,6 +58,7 @@ public class SolrDAO{
   private CyclicBarrier readerCB;
   private CyclicBarrier writerCB;
   private Boolean isWriterThreadInitiated;
+  private StringBuffer nextCursorMark;
 
   SolrDAO(String nodeURL, String shardName, String collectionName, SolrQuery query){
     this.nodeURL = nodeURL;
@@ -72,8 +74,10 @@ public class SolrDAO{
       this.inputBuffer = new SolrDocumentList();
       this.inputDocs = new SolrDocumentList();
       this.readerCB=new CyclicBarrier(2);
+      this.nextCursorMark = new StringBuffer();
+      this.nextCursorMark.append("*");
       LOG.debug("Starting the SolrBatchReader thread for start = " + start + ", window = " + window);
-      T = new Thread(new SolrBatchReader(start, window, size, query, solrServer, inputBuffer,readerCB));
+      T = new Thread(new SolrBatchReader(start, window, size, query, solrServer, inputBuffer,readerCB, nextCursorMark));
       T.start();
     }else{
       this.outputBuffer = new ArrayList<SolrInputDocument>();
@@ -123,7 +127,7 @@ public class SolrDAO{
       inputBuffer.clear();
       start = start + window;
       LOG.debug("Starting the SolrBatchReader thread for start = " + start + ", window = " + window);
-      T = new Thread(new SolrBatchReader(start, window, size, query, solrServer, inputBuffer,readerCB));
+      T = new Thread(new SolrBatchReader(start, window, size, query, solrServer, inputBuffer,readerCB, nextCursorMark));
       T.start();
     }
 
