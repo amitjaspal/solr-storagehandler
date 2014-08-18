@@ -22,9 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.HiveMetaHook;
 import org.apache.hadoop.hive.ql.index.IndexPredicateAnalyzer;
@@ -40,81 +37,84 @@ import org.apache.hadoop.hive.serde2.SerDe;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.log4j.Logger;
 
-
-
-
+/*
+ * SolrStorageHandler implements HiveStorageHandler, HiveStoragePredicateHandler interfaces.
+ * It can be used to plug-in SOLR backed data into HIVE, data can be read from and written
+ * to a SOLR collection using SolrStorageHandler
+ */
 public class SolrStorageHandler implements HiveStorageHandler, HiveStoragePredicateHandler{
-    
-    private Configuration conf;
-    static final Log LOG = LogFactory.getLog(SolrStorageHandler.class);
-    
-    @Override
-    public Configuration getConf(){
-        return this.conf;
-    }
-    
-    @Override
-    public void setConf(Configuration conf){
-        this.conf = conf;
-    }
-    
-    @Override
-    public Class<? extends InputFormat> getInputFormatClass(){
-        return SolrInputFormat.class;
-    }
-    
-    @Override
-    public Class<? extends OutputFormat> getOutputFormatClass(){
-        return SolrOutputFormat.class;
-    }
-    
-    @Override
-    public HiveMetaHook getMetaHook(){
-        return new SolrMetaHook();
-    }
 
-    @Override
-    public Class<? extends SerDe> getSerDeClass(){
-        return SolrSerDe.class;
-    }
-    
-    @Override
-    public HiveAuthorizationProvider getAuthorizationProvider(){
-        return null;
-    }
-    
-    @Override 
-    public void configureInputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
-        Properties externalTableProperties = tableDesc.getProperties();
-        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties, tableDesc);
-    }
-    
-    @Override
-    public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
-        Properties externalTableProperties = tableDesc.getProperties();
-        ExternalTableProperties.configureExternalTableProperties(externalTableProperties, jobProperties, tableDesc);
-    }
-    
-    @Override
-    public void configureJobConf(TableDesc tableDesc, JobConf jobConf){
-        // do nothing;
-    }
-    
-    @Override
-    public void configureTableJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
-        // do nothing;
-    }
-    
-    @Override
-    public DecomposedPredicate decomposePredicate(JobConf entries, Deserializer deserializer, ExprNodeDesc exprNodeDesc ){
-        IndexPredicateAnalyzer analyzer = PredicateAnalyzer.getPredicateAnalyzer();
-        List<IndexSearchCondition> searchConditions = new ArrayList<IndexSearchCondition>();
-        ExprNodeDesc residualPredicate = analyzer.analyzePredicate(exprNodeDesc, searchConditions);
-        DecomposedPredicate decomposedPredicate = new DecomposedPredicate();
-        decomposedPredicate.pushedPredicate = analyzer.translateSearchConditions(searchConditions);
-        decomposedPredicate.residualPredicate = (ExprNodeGenericFuncDesc) residualPredicate;
-        return decomposedPredicate;
-    }
-    
+  private static final Logger LOG = Logger.getLogger(ExternalTableProperties.class.getName());
+  private Configuration conf;
+
+  @Override
+  public Configuration getConf(){
+    return this.conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf){
+    this.conf = conf;
+  }
+
+  @Override
+  public Class<? extends InputFormat> getInputFormatClass(){
+    return SolrInputFormat.class;
+  }
+
+  @Override
+  public Class<? extends OutputFormat> getOutputFormatClass(){
+    return SolrOutputFormat.class;
+  }
+
+  @Override
+  public HiveMetaHook getMetaHook(){
+    return new SolrMetaHook();
+  }
+
+  @Override
+  public Class<? extends SerDe> getSerDeClass(){
+    return SolrSerDe.class;
+  }
+
+  @Override
+  public HiveAuthorizationProvider getAuthorizationProvider(){
+    return null;
+  }
+
+  @Override
+  public void configureInputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
+    Properties externalTableProperties = tableDesc.getProperties();
+    ExternalTableProperties.initialize(externalTableProperties, jobProperties, tableDesc);
+  }
+
+  @Override
+  public void configureOutputJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
+    Properties externalTableProperties = tableDesc.getProperties();
+    ExternalTableProperties.initialize(externalTableProperties, jobProperties, tableDesc);
+  }
+
+  @Override
+  public void configureJobConf(TableDesc tableDesc, JobConf jobConf){
+    // do nothing;
+  }
+
+  @Override
+  public void configureTableJobProperties(TableDesc tableDesc, Map<String, String> jobProperties){
+    // do nothing;
+  }
+
+  @Override
+  public DecomposedPredicate decomposePredicate(JobConf entries, Deserializer deserializer, ExprNodeDesc exprNodeDesc ){
+    IndexPredicateAnalyzer analyzer = PredicateAnalyzer.getPredicateAnalyzer();
+    List<IndexSearchCondition> searchConditions = new ArrayList<IndexSearchCondition>();
+    ExprNodeDesc residualPredicate = analyzer.analyzePredicate(exprNodeDesc, searchConditions);
+    DecomposedPredicate decomposedPredicate = new DecomposedPredicate();
+    decomposedPredicate.pushedPredicate = analyzer.translateSearchConditions(searchConditions);
+    decomposedPredicate.residualPredicate = (ExprNodeGenericFuncDesc) residualPredicate;
+    return decomposedPredicate;
+  }
+
 }
