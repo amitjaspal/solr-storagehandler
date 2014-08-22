@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hive.solr;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hive.metastore.HiveMetaHook;
 import org.apache.hadoop.hive.metastore.api.MetaException;
 import org.apache.hadoop.hive.metastore.api.Table;

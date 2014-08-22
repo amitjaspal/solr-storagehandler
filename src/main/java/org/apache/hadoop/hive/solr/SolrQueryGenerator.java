@@ -38,7 +38,7 @@ public class SolrQueryGenerator {
     SolrQuery solrQuery = new SolrQuery();
     String query = job.get(ExternalTableProperties.SOLR_QUERY);
     solrQuery.setQuery(query);
-    String fields = StringUtils.join(ExternalTableProperties.COLUMN_NAMES, ", ");
+    String fields = StringUtils.join(new ExternalTableProperties().COLUMN_NAMES, ", ");
     solrQuery.set("fl", fields);
 
     // Since each mapper is going to query each shard separately
@@ -58,21 +58,16 @@ public class SolrQueryGenerator {
     analyzer.analyzePredicate(filterExpr, searchConditions);
     for (IndexSearchCondition condition : searchConditions){
 
+      String fieldName = condition.getColumnDesc().getColumn();
+      String value = condition.getConstantDesc().getValue().toString();
+      StringBuffer fqExp = new StringBuffer();
       if (condition.getComparisonOp().equals("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqual")){
-        String fieldName = condition.getColumnDesc().getColumn();
-        String value = condition.getConstantDesc().getValue().toString();
         // Formulating Filter Query Expression.
-        StringBuffer fqExp = new StringBuffer();
         fqExp.append(fieldName).append(":").append(value);
         solrQuery.addFilterQuery(fqExp.toString());
         LOG.debug("Equals comparison found, adding it to SOLR filter query");
       }
-
       if (condition.getComparisonOp().equals("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPGreaterThan")){
-        String fieldName = condition.getColumnDesc().getColumn();
-        String value = condition.getConstantDesc().getValue().toString();
-        // Formulating Filter Query Expression.
-        StringBuffer fqExp = new StringBuffer();
         fqExp.append(fieldName).append(":").append("(").append(value)
         .append(" TO *)");
         solrQuery.addFilterQuery(fqExp.toString());
@@ -80,10 +75,6 @@ public class SolrQueryGenerator {
       }
 
       if (condition.getComparisonOp().equals("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrGreaterThan")) {
-        String fieldName = condition.getColumnDesc().getColumn();
-        String value = condition.getConstantDesc().getValue().toString();
-        // Formulating Filter Query Expression.
-        StringBuffer fqExp = new StringBuffer();
         fqExp.append(fieldName).append(":").append("[").append(value)
         .append(" TO *]");
         solrQuery.addFilterQuery(fqExp.toString());
@@ -91,10 +82,6 @@ public class SolrQueryGenerator {
       }
 
       if (condition.getComparisonOp().equals("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPLessThan")){
-        String fieldName = condition.getColumnDesc().getColumn();
-        String value = condition.getConstantDesc().getValue().toString();
-        // Formulating Filter Query Expression.
-        StringBuffer fqExp = new StringBuffer();
         fqExp.append(fieldName).append(":").append("(* TO ").append(value)
         .append(" )");
         solrQuery.addFilterQuery(fqExp.toString());
@@ -102,10 +89,6 @@ public class SolrQueryGenerator {
       }
 
       if (condition.getComparisonOp().equals("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrLessThan")) {
-        String fieldName = condition.getColumnDesc().getColumn();
-        String value = condition.getConstantDesc().getValue().toString();
-        // Formulating Filter Query Expression.
-        StringBuffer fqExp = new StringBuffer();
         fqExp.append(fieldName).append(":").append("[* TO ").append(value)
         .append(" ]");
         solrQuery.addFilterQuery(fqExp.toString());

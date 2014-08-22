@@ -36,7 +36,7 @@ import org.apache.solr.common.SolrDocumentList;
  */
 class SolrBatchReader implements Runnable{
 
-  private static final Logger LOG = Logger.getLogger(ExternalTableProperties.class.getName());
+  private static final Logger LOG = Logger.getLogger(SolrBatchReader.class.getName());
   private final Integer start;
   private final Integer window;
   private final Long size;
@@ -81,7 +81,8 @@ class SolrBatchReader implements Runnable{
     }catch(BrokenBarrierException ex){ // TODO: Catch proper exceptions
       LOG.log(Level.ERROR, "Exception occured while waiting on cyclic buffer", ex);
     }catch(InterruptedException ex){
-      LOG.log(Level.ERROR, "Exception occured while waiting for cyclic buffer", ex);
+      // Restore the interrupted status
+      Thread.currentThread().interrupt();
     }
   }
 }

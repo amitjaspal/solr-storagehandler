@@ -21,6 +21,7 @@ package org.apache.hadoop.hive.solr;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 
 import org.apache.log4j.Level;
@@ -34,16 +35,18 @@ import org.apache.solr.common.SolrInputDocument;
 
 /*
  * SolrDAO acts as a solr data access object and uses solrj api
- * to provide read and write api's. SolrDAO spawns SolrDAO spawns
- * SolrBatchReader and SolrBatchWriter to perform read and write
- * operations.
+ * to provide read and write operations to SOLR. SolrDAO spawns
+ * SolrDAO spawns SolrBatchReader and SolrBatchWriter to perform
+ * read and write operations. SolrBatchReader thread reads data
+ * in a moving window fashion such that it is always 1 window
+ * ahead of the values read by the SolrRecordReader.
  */
 public class SolrDAO{
 
   private static final Logger LOG = Logger.getLogger(SolrDAO.class.getName());
-  private String nodeURL;
-  private String shardName;
-  private String collectionName;
+  private final String nodeURL;
+  private final String shardName;
+  private final String collectionName;
   private final HttpSolrServer solrServer;
   private SolrDocumentList inputDocs;
   private SolrDocumentList inputBuffer;
@@ -107,8 +110,10 @@ public class SolrDAO{
     if(currentPosition >= size){
       try{
         readerCB.await();
-      }catch(Exception ex){
-        ex.printStackTrace();
+      }catch(InterruptedException ex) {
+        Thread.currentThread().interrupt();
+      }catch(BrokenBarrierException ex) {
+        LOG.log(Level.ERROR, "Exception occured while waiting on cyclic buffer", ex);
       }
       return null;
     }
@@ -121,9 +126,7 @@ public class SolrDAO{
         ex.printStackTrace();
       }
       readerCB.reset();
-      for(int i = 0;i<inputBuffer.size();i++){
-        inputDocs.add(inputBuffer.get(i));
-      }
+      inputDocs.addAll(inputBuffer);
       inputBuffer.clear();
       start = start + window;
       LOG.debug("Starting the SolrBatchReader thread for start = " + start + ", window = " + window);
@@ -136,6 +139,11 @@ public class SolrDAO{
     return nextDoc;
   }
 
+  public float getProgress(){
+    if(size == 0) return 0.0f;
+    return (start + currentPosition) / (size) ;
+  }
+  
   public void saveDoc(SolrInputDocument doc){
     outputDocs.add(doc);
 
@@ -143,8 +151,10 @@ public class SolrDAO{
       if(isWriterThreadInitiated){
         try{
           writerCB.await();
-        }catch(Exception ex){
-          ex.printStackTrace();
+        }catch(BrokenBarrierException ex){
+          LOG.log(Level.ERROR, "Exception occured while waiting on cyclic buffer", ex);
+        }catch(InterruptedException ex){
+          Thread.currentThread().interrupt();
         }
 
         writerCB.reset();
@@ -174,33 +184,5 @@ public class SolrDAO{
       e.printStackTrace();
     }
     isWriterThreadInitiated = false;
-  }
-
-  public long getLength(){
-    return inputDocs.size();
-  }
-
-  public String getNodeURL() {
-    return nodeURL;
-  }
-
-  public void setNodeURL(String nodeURL) {
-    this.nodeURL = nodeURL;
-  }
-
-  public String getShardName() {
-    return shardName;
-  }
-
-  public void setShardName(String shardName) {
-    this.shardName = shardName;
-  }
-
-  public String getCollectionName() {
-    return collectionName;
-  }
-
-  public void setCollectionName(String collectionName) {
-    this.collectionName = collectionName;
   }
 }

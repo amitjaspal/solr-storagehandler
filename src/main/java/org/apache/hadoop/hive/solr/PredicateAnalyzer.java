@@ -18,8 +18,13 @@
 
 package org.apache.hadoop.hive.solr;
 
-import org.apache.log4j.Logger;
 import org.apache.hadoop.hive.ql.index.IndexPredicateAnalyzer;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqual;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrGreaterThan;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrLessThan;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPGreaterThan;
+import org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPLessThan;
+import org.apache.log4j.Logger;
 
 /*
  * PredicateAnalyzer class exposes a custom predicate analyzer that is used by
@@ -28,26 +33,24 @@ import org.apache.hadoop.hive.ql.index.IndexPredicateAnalyzer;
 
 public class PredicateAnalyzer {
 
-  static final Logger LOG = Logger.getLogger(SolrStorageHandler.class);
+  static final Logger LOG = Logger.getLogger(PredicateAnalyzer.class);
   /*
    * This method initializes the PredicateAnalyzer that is consumed
    * by the Hive query optimizer while evaluating the query.
    * We can plug in predicates to be pushed into SOLR in this method.
    * A know limitation of predicate pushdown is that only predicates with
-   * conjunctions will be pushed at the SOLR level.
+   * conjunctions will be pushed to the SOLR level.
    */
-  public static IndexPredicateAnalyzer getPredicateAnalyzer(){
+  public static IndexPredicateAnalyzer getPredicateAnalyzer() {
 
     IndexPredicateAnalyzer analyzer = new IndexPredicateAnalyzer();
-    analyzer.addComparisonOp("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPGreaterThan");
-    analyzer.addComparisonOp("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqual");
-    analyzer.addComparisonOp("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrGreaterThan");
-    analyzer.addComparisonOp("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPEqualOrLessThan");
-    analyzer.addComparisonOp("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPLessThan");
-    analyzer.addComparisonOp("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPGreaterThan");
+    analyzer.addComparisonOp(GenericUDFOPEqual.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPGreaterThan.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPEqualOrGreaterThan.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPLessThan.class.getName());
+    analyzer.addComparisonOp(GenericUDFOPEqualOrLessThan.class.getName());
     //TODO: Add support for LIKE operator.
     return analyzer;
-
   }
 
 }

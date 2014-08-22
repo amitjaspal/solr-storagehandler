@@ -45,7 +45,7 @@ import com.sun.rowset.internal.Row;
 @SuppressWarnings("rawtypes")
 public class SolrOutputFormat implements HiveOutputFormat<NullWritable, Row>
 {
-  private static final Logger LOG = Logger.getLogger(SolrBatchWriter.class.getName());
+  private static final Logger LOG = Logger.getLogger(SolrOutputFormat.class);
 
   @Override
   public org.apache.hadoop.mapred.RecordWriter getRecordWriter(FileSystem ignored, JobConf job,

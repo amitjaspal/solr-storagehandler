@@ -57,8 +57,7 @@ public class SolrRecordReader implements RecordReader<LongWritable, MapWritable>
 
   @Override
   public float getProgress() throws IOException{
-    if(solrDAO.getLength() == 0) return 0.0f;
-    return currentPosition / solrDAO.getLength();
+   return solrDAO.getProgress();
   }
 
   @Override

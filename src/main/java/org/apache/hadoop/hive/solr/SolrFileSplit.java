@@ -28,49 +28,49 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileSplit;
 
 /*
- * HiveSolrInputSplit is just a wrapper class on top of SolrInputSplit. It seems
+ * SolrFileSplit is just a wrapper class on top of SolrInputSplit. It seems
  * Hive considers all data sources to be of FileInputFormat so we need to define
- * the wrapper class HiveSolrInputSplit which extends from FileInputSplit.
+ * the wrapper class SolrFileSplit which extends from FileSplit.
  * Under the hood all functionalities are delegated to SolrInputSplit only.
  */
 
-class HiveSolrInputSplit extends FileSplit {
+class SolrFileSplit extends FileSplit {
 
-  private static final Logger LOG = Logger.getLogger(ExternalTableProperties.class.getName());
+  private static final Logger LOG = Logger.getLogger(SolrFileSplit.class);
   private final SolrInputSplit solrSplit;
   private Path path;
 
-  public HiveSolrInputSplit(){
+  public SolrFileSplit() {
     // TODO: Passing single spaced path " " is not the best way.
     // need to figure out better ways of handling this.
     // path is properly initialized when readFields is called
     this(new SolrInputSplit(), new Path(" "));
   }
 
-  HiveSolrInputSplit(SolrInputSplit solrSplit, Path path){
+  public SolrFileSplit(SolrInputSplit solrSplit, Path path) {
     super(path, 0, 0, (String[]) null);
     this.solrSplit = solrSplit;
     this.path = path;
   }
 
   @Override
-  public long getLength(){
+  public long getLength() {
     long length = 0;
-    try{
+    try {
       length = solrSplit.getLength();
-    }catch(IOException ex){
+    } catch(IOException ex) {
       LOG.log(Level.ERROR, "Exception occured while computing length of the split", ex);
     }
     return length;
   }
 
   @Override
-  public String[] getLocations() throws IOException{
+  public String[] getLocations() throws IOException {
     return solrSplit.getLocations();
   }
 
   @Override
-  public void write(DataOutput out) throws IOException{
+  public void write(DataOutput out) throws IOException {
     Text.writeString(out, path.toString());
     solrSplit.write(out);
   }
@@ -91,7 +91,7 @@ class HiveSolrInputSplit extends FileSplit {
     return path;
   }
 
-  public SolrInputSplit getSolrSplit(){
+  public SolrInputSplit getSolrSplit() {
     return this.solrSplit;
   }
 }

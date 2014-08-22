@@ -61,7 +61,8 @@ class SolrBatchWriter implements Runnable{
     try{
       writerCB.await();
     }catch(InterruptedException ex){
-      LOG.log(Level.ERROR, "Exception occured while waiting for cyclic buffer", ex);
+      // Restore the interrupted status
+      Thread.currentThread().interrupt();
     }catch(BrokenBarrierException ex){
       LOG.log(Level.ERROR, "Exception occured while waiting for cyclic buffer", ex);
     }
