@@ -73,7 +73,7 @@ public class SolrSerDe extends AbstractSerDe {
 
     String colNamesStr = tbl.getProperty(serdeConstants.LIST_COLUMNS);
     String[] columnNamesArray = colNamesStr.split(",");
-    columnNames = Arrays.asList(colNamesStr.split(","));
+  //  columnNames = Arrays.asList(colNamesStr.split(","));
     fieldCount = columnNamesArray.length;
     String columnTypeProperty = tbl.getProperty(serdeConstants.LIST_COLUMN_TYPES);
     columnTypesArray = columnTypeProperty.split(":");
@@ -82,21 +82,16 @@ public class SolrSerDe extends AbstractSerDe {
         columnNamesArray.length);
     for (int i = 0; i < columnNamesArray.length; i++) {
       if (HIVE_TYPE_INT.equalsIgnoreCase(columnTypesArray[i])) {
-        fieldOIs
-        .add(PrimitiveObjectInspectorFactory.javaIntObjectInspector);
+        fieldOIs.add(PrimitiveObjectInspectorFactory.javaIntObjectInspector);
       } else if (SolrSerDe.HIVE_TYPE_BOOLEAN.equalsIgnoreCase(columnTypesArray[i])) {
-        fieldOIs
-        .add(PrimitiveObjectInspectorFactory.javaBooleanObjectInspector);
+        fieldOIs.add(PrimitiveObjectInspectorFactory.javaBooleanObjectInspector);
       } else if (SolrSerDe.HIVE_TYPE_FLOAT.equalsIgnoreCase(columnTypesArray[i])) {
-        fieldOIs
-        .add(PrimitiveObjectInspectorFactory.javaFloatObjectInspector);
+        fieldOIs.add(PrimitiveObjectInspectorFactory.javaFloatObjectInspector);
       } else if (SolrSerDe.HIVE_TYPE_DOUBLE.equalsIgnoreCase(columnTypesArray[i])) {
-        fieldOIs
-        .add(PrimitiveObjectInspectorFactory.javaDoubleObjectInspector);
+        fieldOIs.add(PrimitiveObjectInspectorFactory.javaDoubleObjectInspector);
       } else {
         // treat as string
-        fieldOIs
-        .add(PrimitiveObjectInspectorFactory.javaStringObjectInspector);
+        fieldOIs.add(PrimitiveObjectInspectorFactory.javaStringObjectInspector);
       }
     }
     objectInspector = ObjectInspectorFactory

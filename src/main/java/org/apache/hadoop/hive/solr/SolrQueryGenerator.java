@@ -68,8 +68,8 @@ public class SolrQueryGenerator {
         LOG.debug("Equals comparison found, adding it to SOLR filter query");
       }
       if (condition.getComparisonOp().equals("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPGreaterThan")){
-        fqExp.append(fieldName).append(":").append("(").append(value)
-        .append(" TO *)");
+        fqExp.append(fieldName).append(":").append("{").append(value)
+        .append(" TO *}");
         solrQuery.addFilterQuery(fqExp.toString());
         LOG.debug("Greater than comparison found, adding it to SOLR filter query");
       }
@@ -82,8 +82,8 @@ public class SolrQueryGenerator {
       }
 
       if (condition.getComparisonOp().equals("org.apache.hadoop.hive.ql.udf.generic.GenericUDFOPLessThan")){
-        fqExp.append(fieldName).append(":").append("(* TO ").append(value)
-        .append(" )");
+        fqExp.append(fieldName).append(":").append("{* TO ").append(value)
+        .append(" }");
         solrQuery.addFilterQuery(fqExp.toString());
         LOG.debug("Less than comparison found, adding it to SOLR filter query");
       }
